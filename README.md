@@ -42,7 +42,7 @@ uv run dashboard            # http://localhost:8001, config from ~/.config/dashb
 deploy/install.sh           # commit first: it deploys HEAD
 ```
 
-Installs to `~/.local/share/dashboard/app` (uv env with uv-managed Python), the user unit
+Installs to `~/apps/dashboard` (uv env with uv-managed Python), the user unit
 `dashboard.service`, `~/.local/bin/dashboard-kiosk` and its autostart entry
 (`~/.config/autostart/dashboard-kiosk.desktop`). The kiosk uses its own Firefox profile in
 `~/.local/share/dashboard/firefox` with `deploy/user.js`.

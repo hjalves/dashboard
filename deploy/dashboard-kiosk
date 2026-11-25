@@ -3,7 +3,7 @@
 URL=${DASHBOARD_URL:-http://localhost:8001/}
 PROFILE=${XDG_DATA_HOME:-$HOME/.local/share}/dashboard/firefox
 mkdir -p "$PROFILE"
-cp -f "${XDG_DATA_HOME:-$HOME/.local/share}/dashboard/app/deploy/user.js" "$PROFILE/user.js"
+cp -f "$HOME/apps/dashboard/deploy/user.js" "$PROFILE/user.js"
 
 until curl -sf -o /dev/null "$URL"; do sleep 2; done
 while true; do

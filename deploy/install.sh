@@ -9,7 +9,7 @@ git diff --quiet HEAD -- . || echo "warning: uncommitted changes are NOT deploye
 
 git archive --format=tar HEAD | ssh "$HOST" '
   set -e
-  APP=~/.local/share/dashboard/app
+  APP=~/apps/dashboard
   rm -rf "$APP.new" && mkdir -p "$APP.new" && tar -x -C "$APP.new"
   [ -d "$APP/.venv" ] && mv "$APP/.venv" "$APP.new/.venv"
   rm -rf "$APP" && mv "$APP.new" "$APP"

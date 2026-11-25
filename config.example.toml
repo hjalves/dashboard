@@ -17,6 +17,10 @@ hours = 24
 # weatherd on the router (anonymous ubus read); "" to hide the station
 station_ubus = "http://192.168.0.254/ubus"
 
+[network]
+# The router's ubus endpoint (lanwatch, huawei-trafficd; anonymous read)
+router_ubus = "http://192.168.0.254/ubus"
+
 [news]
 # Names from https://news.kagi.com/kite.json
 categories = ["Portugal", "World", "Europe", "Business", "Technology", "Linux & OSS"]

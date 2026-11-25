@@ -89,14 +89,15 @@ class IpmaStatic:
 ipma_static = IpmaStatic()
 
 
-async def _ubus(c: httpx.AsyncClient, url: str, method: str, args: dict | None = None):
-    body = {"jsonrpc": "2.0", "id": 1, "method": "call",
-            "params": ["0" * 32, "weather", method, args or {}]}
-    r = await c.post(url, json=body, timeout=8)
+async def _ubus(c: httpx.AsyncClient, url: str, method: str, args: dict | None = None,
+                obj: str = "weather", timeout: float = 8):
+    """Anonymous read through the router's uhttpd /ubus (rpcd ACLs allow it for these objects)."""
+    body = {"jsonrpc": "2.0", "id": 1, "method": "call", "params": ["0" * 32, obj, method, args or {}]}
+    r = await c.post(url, json=body, timeout=timeout)
     r.raise_for_status()
     res = r.json()["result"]
     if res[0] != 0:
-        raise RuntimeError(f"ubus weather.{method}: status {res[0]}")
+        raise RuntimeError(f"ubus {obj}.{method}: status {res[0]}")
     return res[1] if len(res) > 1 else {}
 
 
@@ -206,6 +207,120 @@ async def fetch_ipma(location: int, hours: int) -> dict:
         "daily": daily[:5],
         "sunrise": rise.astimezone(TZ).isoformat(),
         "sunset": sset.astimezone(TZ).isoformat(),
+    }
+
+
+# ---------------------------------------------------------------- network (router)
+
+async def fetch_lan(url: str) -> dict:
+    """lanwatch on the router: online devices only, newly seen ones first, then by address."""
+    async with client() as c:
+        status = await _ubus(c, url, "status", obj="lanwatch")
+        devs = (await _ubus(c, url, "devices", obj="lanwatch")).get("devices", [])
+
+    def ip_key(d):
+        try:
+            return tuple(int(p) for p in d.get("ip", "").split("."))
+        except ValueError:
+            return (999,)
+
+    online = sorted((d for d in devs if d.get("online")), key=lambda d: (not d.get("new"), ip_key(d)))
+    keep = ("mac", "ip", "name", "vendor", "info", "wifi_signal", "new", "private_mac", "first_seen", "last_seen")
+    return {
+        "online": len(online), "known": status.get("devices"), "new": status.get("new"),
+        "last_sweep": status.get("last_sweep"), "sweep_interval": status.get("sweep_interval"),
+        "devices": [{k: d.get(k) for k in keep} for d in online],
+    }
+
+
+class TrafficHistory:
+    """The last 24 h of huawei-trafficd samples, kept here so the router (a small TL-WR841N) only
+    sends the full day once (~600 KB); after that each refresh asks only for newer samples."""
+
+    SPAN = 86400
+
+    def __init__(self, url: str):
+        self.url = url
+        self.samples: list[dict] = []
+
+    async def refresh(self) -> dict:
+        async with client() as c:
+            if self.samples:
+                args = {"from": self.samples[-1]["time"] + 1, "tier": "fine", "limit": 2000}
+            else:
+                args = {"from": -self.SPAN, "tier": "fine", "limit": 2000}
+            new = (await _ubus(c, self.url, "query", args, obj="huawei.traffic", timeout=30)).get("samples", [])
+            status = await _ubus(c, self.url, "status", obj="huawei.traffic")
+        self.samples.extend(new)
+        cutoff = time.time() - self.SPAN
+        self.samples = [x for x in self.samples if x["time"] >= cutoff]
+        return summarize_traffic(self.samples, status)
+
+
+def summarize_traffic(samples: list[dict], status: dict, bucket: int = 900) -> dict:
+    """Current state plus 15-minute buckets over the last 24 h. Throughput comes from the session
+    byte counters between consecutive samples (they reset when the LTE session reconnects)."""
+    rates = []  # (time, seconds, down_bytes, up_bytes)
+    for a, b in zip(samples, samples[1:]):
+        dt = b["time"] - a["time"]
+        dd, du = b.get("download", 0) - a.get("download", 0), b.get("upload", 0) - a.get("upload", 0)
+        if 0 < dt <= 300 and dd >= 0 and du >= 0:
+            rates.append((b["time"], dt, dd, du))
+
+    def mbps(byte_count, seconds):
+        return round(byte_count * 8 / seconds / 1e6, 2) if seconds else None
+
+    def window(seconds):
+        lo = time.time() - seconds
+        r = [x for x in rates if x[0] >= lo]
+        s = [x for x in samples if x["time"] >= lo]
+        secs = sum(x[1] for x in r)
+        sent = sum(x.get("ping_sent", 0) for x in s)
+        lost = sum(x.get("ping_lost", 0) for x in s)
+        rtts = [(x["rtt_avg"], x.get("ping_sent", 0) - x.get("ping_lost", 0)) for x in s if "rtt_avg" in x]
+        w = sum(n for _, n in rtts)
+        return {
+            "down_mbps": mbps(sum(x[2] for x in r), secs), "up_mbps": mbps(sum(x[3] for x in r), secs),
+            "loss_pct": round(100 * lost / sent, 1) if sent else None,
+            "rtt_ms": round(sum(v * n for v, n in rtts) / w) if w else None,
+        }
+
+    midnight = datetime.now(TZ).replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
+    today = [x for x in rates if x[0] > midnight]
+
+    buckets = []
+    if samples:
+        end = int(time.time()) // bucket * bucket + bucket
+        for start in range(end - 86400, end, bucket):
+            s = [x for x in samples if start <= x["time"] < start + bucket]
+            r = [x for x in rates if start <= x[0] < start + bucket]
+            sent = sum(x.get("ping_sent", 0) for x in s)
+            lost = sum(x.get("ping_lost", 0) for x in s)
+            rtts = [x["rtt_avg"] for x in s if "rtt_avg" in x]
+            secs = sum(x[1] for x in r)
+            buckets.append({
+                "t": start,
+                "rtt": round(sum(rtts) / len(rtts)) if rtts else None,
+                "rtt_max": max((x["rtt_max"] for x in s if "rtt_max" in x), default=None),
+                "loss": round(100 * lost / sent, 1) if sent else None,
+                "outage": any(x.get("ping_sent", 0) and not x.get("ping_ok") for x in s),
+                "down": mbps(sum(x[2] for x in r), secs), "up": mbps(sum(x[3] for x in r), secs),
+                "down_peak": max((mbps(x[2], x[1]) for x in r), default=None),
+            })
+
+    last = samples[-1] if samples else {}
+    keep = ("time", "uptime", "rsrp", "rsrq", "sinr", "rssi", "cell_id", "conn_status", "net_type",
+            "rtt_avg", "gw_rtt_avg", "gw_lost", "gw_sent", "plc_down", "plc_up")
+    return {
+        "latest": {k: last.get(k) for k in keep if k in last},
+        "now": window(180),  # the last few samples
+        "last_10_min": window(600),
+        "today": {"down_bytes": sum(x[2] for x in today), "up_bytes": sum(x[3] for x in today)},
+        "targets": (status.get("latency") or {}).get("targets"),
+        "failures": status.get("failures"),
+        "last_success": status.get("last_success"),
+        "buckets": buckets,
+        "bucket_seconds": bucket,
     }
 
 

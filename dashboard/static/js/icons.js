@@ -1,9 +1,8 @@
-"use strict";
 /* IPMA weather type (https://api.ipma.pt/open-data/weather-type-classe.json) → Meteocons monochrome
    icon (MIT, static/icons/). "{dn}" becomes "day" or "night". A hand-made table on purpose: IPMA's
    own icons are colourful and skeuomorphic; the user chose a flat Metro set (2026-11-25).
    Unknown types and "no information" (0, -99) get no icon: the description text is still shown. */
-const WEATHER_ICONS = {
+export const WEATHER_ICONS = {
   1: "clear-{dn}",                    // Clear sky
   2: "partly-cloudy-{dn}",            // Partly cloudy (pouco nublado)
   3: "overcast-{dn}",                 // Sunny intervals (parcialmente nublado)
@@ -38,7 +37,7 @@ const WEATHER_ICONS = {
 
 /* MET Norway symbol code (without _day/_night; names from github.com/metno/weathericons
    legend.csv, typos included as the API sends them) → Meteocons monochrome icon. */
-const METNO_ICONS = {
+export const METNO_ICONS = {
   clearsky: "clear-{dn}",
   fair: "partly-cloudy-{dn}",
   partlycloudy: "overcast-{dn}",
@@ -84,7 +83,7 @@ const METNO_ICONS = {
 
 /* HTML for an icon tinted with the current text colour, or "" when there's none.
    `type` is a MET Norway symbol (string) or an IPMA weather type (number). */
-function weatherIcon(type, day, cls) {
+export function weatherIcon(type, day, cls) {
   const name = typeof type === "string" ? METNO_ICONS[type] : WEATHER_ICONS[type];
   if (!name) return "";
   const file = name.replace("{dn}", day === false ? "night" : "day");

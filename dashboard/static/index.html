@@ -10,6 +10,10 @@
 <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
+<nav class="scene-nav" id="scene-nav"></nav>
+<div class="scenes" id="scenes">
+
+<section class="scene" data-scene="home" data-title="home">
 <main class="grid">
 
   <section class="clock" id="clock">
@@ -68,7 +72,7 @@
         <div class="back-title">news categories</div>
         <div class="back-sub" id="picker-sub"></div>
       </div>
-      <div class="picker-grid" id="picker-grid"></div>
+      <div class="picker-grid scrollable" id="picker-grid"></div>
       <div class="picker-foot">
         <span class="picker-msg" id="picker-msg"></span>
         <button class="btn" id="picker-cancel">cancel</button>
@@ -83,9 +87,60 @@
   <section class="tile gh" id="gh3"></section>
 
 </main>
+</section>
+
+<section class="scene" data-scene="network" data-title="network">
+<main class="grid net-grid">
+
+  <section class="tile net-stat" id="n-ping">
+    <div class="label">internet</div>
+    <div class="big"><span id="n-rtt">--</span><small>ms</small></div>
+    <div class="sub" id="n-ping-sub"></div>
+    <div class="foot" id="n-ping-foot"></div>
+  </section>
+
+  <section class="tile net-stat" id="n-rate">
+    <div class="label">traffic now</div>
+    <div class="big"><span id="n-down">--</span><small>Mbit/s down</small></div>
+    <div class="sub" id="n-rate-sub"></div>
+    <div class="foot" id="n-rate-foot"></div>
+  </section>
+
+  <section class="tile net-stat" id="n-lte">
+    <div class="label">lte signal</div>
+    <div class="big"><span id="n-sinr">--</span><small>dB SINR</small></div>
+    <div class="sub" id="n-lte-sub"></div>
+    <div class="foot" id="n-lte-foot"></div>
+  </section>
+
+  <section class="tile net-stat" id="n-plc">
+    <div class="label">powerline</div>
+    <div class="big"><span id="n-plc-rate">--</span><small>Mbit/s link</small></div>
+    <div class="sub" id="n-plc-sub"></div>
+    <div class="foot" id="n-plc-foot"></div>
+  </section>
+
+  <section class="tile net-chart" id="n-lat">
+    <div class="label">latency · last 24 h <span class="key-r" id="n-lat-key"></span></div>
+    <svg id="n-lat-svg"></svg>
+  </section>
+
+  <section class="tile net-chart" id="n-traffic">
+    <div class="label">traffic · last 24 h <span class="key-r"><i class="sw down"></i>download <i class="sw up"></i>upload · Mbit/s, 15-min average</span></div>
+    <svg id="n-traffic-svg"></svg>
+  </section>
+
+  <section class="tile net-devs" id="n-devs">
+    <div class="label">devices <span class="where" id="n-devs-count"></span><span class="dots" id="n-devs-dots"></span></div>
+    <div class="dev-pages" id="n-devs-pages"></div>
+  </section>
+
+</main>
+</section>
+
+</div>
 
 <script src="/static/vendor/hls.min.js"></script>
-<script src="/static/icons.js"></script>
-<script src="/static/app.js"></script>
+<script type="module" src="/static/js/main.js"></script>
 </body>
 </html>

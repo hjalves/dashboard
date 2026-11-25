@@ -22,6 +22,10 @@ DEFAULTS = {
         # Router's ubus endpoint for weatherd (anonymous read). Empty disables the station.
         "station_ubus": "http://192.168.0.254/ubus",
     },
+    "network": {
+        # The router's ubus endpoint, for lanwatch and huawei-trafficd (anonymous read)
+        "router_ubus": "http://192.168.0.254/ubus",
+    },
     "news": {
         # Kagi News category names, as listed in https://news.kagi.com/kite.json
         "categories": ["Portugal", "World", "Europe", "Business", "Technology", "Linux & OSS"],

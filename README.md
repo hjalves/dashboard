@@ -17,6 +17,24 @@ Every `/api/*` answer is `{ok, updated, age, error, data}`: a failed refresh kee
 a tile goes "stale" instead of blank. The page polls `/api/version` and reloads itself after a deploy;
 a big jump in the clock (suspend/resume) refreshes everything and restarts the video.
 
+## Scenes
+
+The page holds several full-screen **scenes** side by side; the strip slides between them (Metro
+panorama). Switch by clicking a title at the top left (`home · network`) or with the mouse wheel;
+the current scene is kept in the URL hash (`#network`), so reloads stay on it. Tiles only poll while
+their scene is on screen and catch up when it comes back. The TV stops when you leave the home scene
+while it's muted (saves CPU) and rejoins the live stream when you return; with sound on it keeps
+playing.
+
+| Scene | Tiles | Source | Refresh |
+|---|---|---|---|
+| home | see above | | |
+| network | internet latency and loss, traffic now and today, LTE signal, powerline link | `huawei-trafficd` on the router (`huawei.traffic` over `/ubus`). The server fetches the last 24 h once (~600 KB) and then only newer samples | 1 min |
+| | latency and traffic, last 24 h (15-min buckets) | same | 1 min |
+| | online devices, newly seen first (pages every 12 s if they don't fit) | `lanwatch` on the router (`lanwatch.devices`) | 30 s |
+
+No speed tests: throughput is what's being used, from the Huawei's byte counters.
+
 ## Input
 
 No keyboard needed. With a mouse: click the TV to toggle sound, click the news to skip ahead,
@@ -40,6 +58,13 @@ Symbols not in a table show text only.
 MET Norway's data is CC BY 4.0, so the tile shows "data: MET Norway". Their terms ask for an
 identifying User-Agent and no more than one request per Expires period (~30 min); the server sends
 a generic `home-dashboard/0.1` and refreshes every 30 min.
+
+## Code layout
+
+`dashboard/app.py` (routes, caching), `sources.py` (fetchers), `config.py`. The page is native ES
+modules, no build step: `static/js/core.js` (helpers, scene-aware polling), `backs.js` (tile flip
+settings), `scenes.js`, `main.js`, then one module per tile under `static/js/home/` and
+`static/js/network/`.
 
 ## Develop
 

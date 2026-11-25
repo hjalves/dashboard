@@ -88,6 +88,12 @@ def build_app(cfg: dict) -> Starlette:
 
     forecast = Cached("forecast", 1800, fetch_forecast)
 
+    # Network scene: the router's lanwatch and huawei-trafficd (anonymous ubus reads).
+    router = cfg["network"]["router_ubus"]
+    lan = Cached("lan", 30, lambda: sources.fetch_lan(router))
+    traffic_history = sources.TrafficHistory(router)
+    internet = Cached("internet", 55, traffic_history.refresh)
+
     def news_categories() -> list[str]:
         return list(state.get("news_categories") or n["categories"])
 
@@ -107,6 +113,12 @@ def build_app(cfg: dict) -> Starlette:
     async def weather(_):
         parts = await asyncio.gather(forecast.get(), station.get() if station else asyncio.sleep(0, None))
         return JSONResponse({"forecast": parts[0], "station": parts[1]})
+
+    async def lan_ep(_):
+        return JSONResponse(await lan.get())
+
+    async def internet_ep(_):
+        return JSONResponse(await internet.get())
 
     async def news_ep(_):
         return JSONResponse(await news.get())
@@ -202,6 +214,8 @@ def build_app(cfg: dict) -> Starlette:
             Route("/", index),
             Route("/api/weather", weather),
             Route("/api/weather/source", weather_source_ep, methods=["GET", "POST"]),
+            Route("/api/lan", lan_ep),
+            Route("/api/internet", internet_ep),
             Route("/api/news", news_ep),
             Route("/api/news/categories", news_categories_ep, methods=["GET", "POST"]),
             Route("/api/github", github_ep),

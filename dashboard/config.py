@@ -3,6 +3,7 @@
 The file is $DASHBOARD_CONFIG, else ~/.config/dashboard/config.toml. Missing keys keep their defaults.
 """
 
+import json
 import os
 import tomllib
 from pathlib import Path
@@ -49,6 +50,27 @@ def config_path() -> Path:
         return Path(env)
     base = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
     return base / "dashboard" / "config.toml"
+
+
+def state_path() -> Path:
+    """Settings changed from the page itself (they override config.toml)."""
+    base = Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local" / "state"))
+    return base / "dashboard" / "state.json"
+
+
+def load_state() -> dict:
+    try:
+        return json.loads(state_path().read_text())
+    except (FileNotFoundError, ValueError):
+        return {}
+
+
+def save_state(state: dict) -> None:
+    path = state_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(json.dumps(state, indent=2, ensure_ascii=False) + "\n")
+    tmp.replace(path)
 
 
 def load() -> dict:

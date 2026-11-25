@@ -73,7 +73,14 @@ def build_app(cfg: dict) -> Starlette:
 
     station = Cached("station", 60, lambda: sources.fetch_station(w["station_ubus"])) if w["station_ubus"] else None
     forecast = Cached("forecast", 1800, lambda: sources.fetch_forecast(int(w["ipma_location"]), int(w["hours"])))
-    news = Cached("news", 1800, lambda: sources.fetch_news(list(n["categories"]), int(n["per_category"])))
+    # News categories: config.toml, unless changed from the page (right-click the tile) → state.json.
+    state = config.load_state()
+
+    def news_categories() -> list[str]:
+        return list(state.get("news_categories") or n["categories"])
+
+    news = Cached("news", 1800, lambda: sources.fetch_news(news_categories(), int(n["per_category"])))
+    kagi_categories = Cached("kagi-categories", 86400, sources.fetch_kagi_categories, retry=120)
     github = Cached("github", 300, lambda: sources.fetch_github(int(g["repos"]), int(g["commits"])))
     tv = Cached("tv", 6 * 3600, lambda: sources.fetch_tv(t["playlist"], t["channel"]), retry=300)
 
@@ -91,6 +98,29 @@ def build_app(cfg: dict) -> Starlette:
 
     async def news_ep(_):
         return JSONResponse(await news.get())
+
+    async def news_categories_ep(req):
+        if req.method == "POST":
+            # Custom header: a plain cross-site form or fetch can't send it (CSRF guard).
+            if req.headers.get("x-dashboard") != "1":
+                return JSONResponse({"error": "missing X-Dashboard header"}, status_code=403)
+            body = await req.json()
+            available = (await kagi_categories.get())["data"] or []
+            chosen = body.get("selected")
+            if not isinstance(chosen, list) or not chosen or len(chosen) > 30:
+                return JSONResponse({"error": "pick 1 to 30 categories"}, status_code=400)
+            unknown = [c for c in chosen if c not in available]
+            if unknown:
+                return JSONResponse({"error": f"unknown categories: {unknown}"}, status_code=400)
+            state["news_categories"] = list(dict.fromkeys(chosen))
+            config.save_state(state)
+            news.updated = 0.0  # refetch with the new list on the next request
+            news.error = None
+            log.info("news categories set to %s", state["news_categories"])
+            return JSONResponse(await news.get())
+        avail = await kagi_categories.get()
+        return JSONResponse({"available": avail["data"] or [], "selected": news_categories(),
+                             "error": avail["error"]})
 
     async def github_ep(_):
         return JSONResponse(await github.get())
@@ -141,6 +171,7 @@ def build_app(cfg: dict) -> Starlette:
             Route("/", index),
             Route("/api/weather", weather),
             Route("/api/news", news_ep),
+            Route("/api/news/categories", news_categories_ep, methods=["GET", "POST"]),
             Route("/api/github", github_ep),
             Route("/api/tv", tv_ep),
             Route("/api/version", version),

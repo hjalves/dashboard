@@ -165,7 +165,10 @@ function drawChart() {
 const news = { stories: [], i: -1, timer: 0 };
 
 async function loadNews() {
-  const r = await getJSON("/api/news");
+  applyNews(await getJSON("/api/news"));
+}
+
+function applyNews(r) {
   if (!r.data) return;
   // Round-robin across categories so the tile alternates topics.
   const cats = r.data.categories.filter((c) => c.stories.length);
@@ -202,6 +205,64 @@ function nextStory() {
   // Preload the image so text and picture change together.
   if (s.image) { const im = new Image(); im.onload = im.onerror = show; im.src = s.image; } else show();
 }
+
+/* Right-click the news tile: choose Kagi categories (saved on the server, mouse only). */
+const picker = { available: [], selected: [] };
+
+async function openPicker() {
+  $("picker-msg").textContent = "loading…";
+  $("picker").classList.remove("hidden");
+  try {
+    const r = await getJSON("/api/news/categories");
+    picker.available = r.available;
+    picker.selected = r.selected.slice();
+    $("picker-msg").textContent = r.error ? "category list may be out of date" : "";
+  } catch (e) {
+    $("picker-msg").textContent = "couldn't load categories";
+  }
+  renderPicker();
+}
+
+function renderPicker() {
+  // Tiles stay in Kagi's order so nothing moves under the mouse; numbers give the rotation order.
+  $("picker-grid").innerHTML = picker.available.map((c) => {
+    const k = picker.selected.indexOf(c);
+    return `<div class="chip${k >= 0 ? " on" : ""}" data-c="${esc(c)}">${esc(c)}${k >= 0 ? `<span class="n">${k + 1}</span>` : ""}</div>`;
+  }).join("");
+  $("picker-save").disabled = !picker.selected.length;
+  $("picker-sub").textContent = picker.selected.length
+    ? "showing, in order: " + picker.selected.join(" · ")
+    : "pick at least one category";
+}
+
+$("picker-grid").addEventListener("click", (e) => {
+  const chip = e.target.closest(".chip");
+  if (!chip) return;
+  const c = chip.dataset.c, k = picker.selected.indexOf(c);
+  if (k >= 0) picker.selected.splice(k, 1); else picker.selected.push(c);
+  renderPicker();
+});
+$("picker-cancel").addEventListener("click", () => $("picker").classList.add("hidden"));
+$("picker-save").addEventListener("click", async () => {
+  $("picker-save").disabled = true;
+  $("picker-msg").textContent = "saving…";
+  try {
+    const r = await fetch("/api/news/categories", {
+      method: "POST", headers: { "Content-Type": "application/json", "X-Dashboard": "1" },
+      body: JSON.stringify({ selected: picker.selected }),
+    });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error || "HTTP " + r.status);
+    news.stories = [];
+    news.i = -1;
+    applyNews(j);
+    $("picker").classList.add("hidden");
+  } catch (e) {
+    $("picker-msg").textContent = "not saved: " + e.message;
+    $("picker-save").disabled = false;
+  }
+});
+$("news").addEventListener("contextmenu", (e) => { e.preventDefault(); openPicker(); });
 
 /* ---------------------------------------------------------------- github */
 

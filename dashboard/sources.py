@@ -203,6 +203,13 @@ def _uncite(text):
     return _CITE.sub("", text).strip() if text else text
 
 
+async def fetch_kagi_categories() -> list[str]:
+    """Every category Kagi News publishes, in Kagi's own order."""
+    async with client() as c:
+        index = (await c.get(KAGI + "kite.json")).raise_for_status().json()
+    return [cat["name"] for cat in index["categories"]]
+
+
 async def fetch_news(categories: list[str], per_category: int) -> dict:
     async with client() as c:
         index = (await c.get(KAGI + "kite.json")).raise_for_status().json()

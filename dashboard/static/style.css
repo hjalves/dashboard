@@ -181,6 +181,42 @@ body.idle .tv-mute:not(.on) { opacity: 0; }
 #w-icon .wi { position: absolute; top: .6rem; right: 1.2rem; width: 10rem; height: 10rem; }
 .day .wi { width: 6.4rem; height: 6.4rem; margin: .2rem 0 0 -.9rem; }
 
+/* ---------------------------------------------------------------- category picker */
+.picker {
+  position: fixed; inset: 0; z-index: 10; box-sizing: border-box;
+  padding: 4rem 4.4rem 3rem; background: #0d0b11;
+  display: flex; flex-direction: column; gap: 2.4rem;
+  transition: opacity .3s ease;
+}
+.picker.hidden { opacity: 0; pointer-events: none; }
+.picker-title { font-size: 6rem; font-weight: 300; line-height: 1; letter-spacing: -.01em; }
+.picker-sub { font-size: 1.9rem; color: var(--ink-3); margin-top: 1rem; }
+.picker-grid {
+  flex: 1; overflow-y: auto; align-content: start;
+  display: grid; gap: .6rem; grid-template-columns: repeat(auto-fill, minmax(24rem, 1fr)); grid-auto-rows: 5.2rem;
+  scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, .3) transparent;
+}
+.chip {
+  position: relative; padding: 0 4.4rem 0 1.6rem; font-size: 1.9rem; line-height: 5.2rem;
+  background: rgba(255, 255, 255, .06); cursor: pointer;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  transition: background .15s;
+}
+.chip:hover { background: rgba(255, 255, 255, .14); }
+.chip.on { background: var(--news); }
+.chip.on:hover { background: #5d3796; }
+.chip .n { position: absolute; right: 1.4rem; top: 50%; transform: translateY(-50%); font-size: 1.6rem; color: var(--ink-2); }
+.picker-foot { display: flex; align-items: center; justify-content: flex-end; gap: 1.2rem; }
+.picker-msg { flex: 1; font-size: 1.9rem; color: var(--ink-2); }
+.btn {
+  font: inherit; font-size: 2rem; color: var(--ink); background: transparent; cursor: pointer;
+  border: 2px solid rgba(255, 255, 255, .7); padding: .9rem 3.4rem; min-width: 16rem;
+}
+.btn:hover { background: rgba(255, 255, 255, .1); }
+.btn.primary { background: var(--news); border-color: var(--news); }
+.btn.primary:hover { background: #5d3796; border-color: #5d3796; }
+.btn:disabled { opacity: .4; cursor: default; }
+
 /* ---------------------------------------------------------------- misc */
 .fade-in { animation: fade .6s ease both; }
 @keyframes fade { from { opacity: 0; } }

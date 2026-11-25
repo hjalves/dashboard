@@ -1,0 +1,12 @@
+[Unit]
+Description=Dashboard data server (http://localhost:8001)
+After=network-online.target
+
+[Service]
+WorkingDirectory=%h/.local/share/dashboard/app
+ExecStart=%h/.local/share/dashboard/app/.venv/bin/dashboard
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

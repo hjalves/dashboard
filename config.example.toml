@@ -1,0 +1,27 @@
+# ~/.config/dashboard/config.toml — every key is optional; these are the defaults.
+
+[listen]
+host = "0.0.0.0"
+port = 8001
+
+[weather]
+# IPMA globalIdLocal: https://api.ipma.pt/public-data/forecast/locations.json (1110600 = Lisboa)
+ipma_location = 1110600
+hours = 24
+# weatherd on the router (anonymous ubus read); "" to hide the station
+station_ubus = "http://192.168.0.254/ubus"
+
+[news]
+# Names from https://news.kagi.com/kite.json
+categories = ["Portugal", "World", "Linux & OSS"]
+per_category = 8
+
+[github]
+# Your most recently pushed repos (token: $GITHUB_TOKEN, else `gh auth token`)
+repos = 8
+commits = 3
+
+[tv]
+playlist = "https://m3upt.com/iptv"
+epg = "https://m3upt.com/epg"
+channel = "RTP Notícias"

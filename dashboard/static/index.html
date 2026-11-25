@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- RTP answers 204 to requests carrying a foreign Referer: send none. -->
+<meta name="referrer" content="no-referrer">
+<title>dashboard</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 4'%3E%3Crect width='1.8' height='1.8' fill='%230f5fa8'/%3E%3Crect x='2.2' width='1.8' height='1.8' fill='%234b2a7b'/%3E%3Crect y='2.2' width='1.8' height='1.8' fill='%232e7d32'/%3E%3Crect x='2.2' y='2.2' width='1.8' height='1.8' fill='%23555'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<main class="grid">
+
+  <section class="clock" id="clock">
+    <div class="time"><span id="hh">--</span><span class="colon">:</span><span id="mm">--</span></div>
+    <div class="date" id="date"></div>
+  </section>
+
+  <section class="tile weather-now" id="weather-now">
+    <div class="label">weather</div>
+    <div class="now-main">
+      <div class="temp" id="w-temp">--°</div>
+      <div class="now-side">
+        <div class="desc" id="w-desc"></div>
+        <div class="hilo" id="w-hilo"></div>
+      </div>
+    </div>
+    <div class="facts" id="w-facts"></div>
+    <div class="stale" id="w-stale"></div>
+  </section>
+
+  <section class="tile weather-hourly" id="weather-hourly">
+    <div class="label">next hours <span class="where" id="w-where"></span><span class="key">rain chance</span></div>
+    <svg id="w-chart" preserveAspectRatio="none"></svg>
+  </section>
+
+  <section class="tile tv" id="tv">
+    <video id="tv-video" muted autoplay playsinline></video>
+    <div class="tv-overlay" id="tv-overlay">
+      <div class="tv-channel" id="tv-channel"></div>
+      <div class="tv-prog" id="tv-prog"></div>
+      <div class="tv-progress"><div id="tv-bar"></div></div>
+      <div class="tv-next" id="tv-next"></div>
+    </div>
+    <div class="tv-mute" id="tv-mute" title="Sound on/off"></div>
+    <div class="tv-status" id="tv-status"></div>
+  </section>
+
+  <section class="tile news" id="news">
+    <div class="news-img" id="news-img"></div>
+    <div class="news-shade"></div>
+    <div class="news-body" id="news-body"></div>
+    <div class="news-foot">
+      <span class="label" id="news-cat">news</span>
+      <span class="dots" id="news-dots"></span>
+    </div>
+  </section>
+
+  <section class="tile gh" id="gh0"></section>
+  <section class="tile gh" id="gh1"></section>
+  <section class="tile gh" id="gh2"></section>
+  <section class="tile gh" id="gh3"></section>
+
+</main>
+<script src="/static/vendor/hls.min.js"></script>
+<script src="/static/app.js"></script>
+</body>
+</html>

@@ -206,21 +206,42 @@ function nextStory() {
   if (s.image) { const im = new Image(); im.onload = im.onerror = show; im.src = s.image; } else show();
 }
 
-/* Right-click the news tile: choose Kagi categories (saved on the server, mouse only). */
-const picker = { available: [], selected: [] };
+/* Right-click the news tile: it turns over and shows its categories (saved on the server). */
+const picker = { available: [], selected: [], open: false };
+
+function flipTile(tile, toBack) {
+  tile.classList.add("flip-out");
+  setTimeout(() => {
+    tile.classList.toggle("flipped", toBack);
+    tile.classList.remove("flip-out");
+    tile.classList.add("flip-in");
+    setTimeout(() => tile.classList.remove("flip-in"), 240);
+  }, 180);
+}
 
 async function openPicker() {
+  if (picker.open) return;
+  picker.open = true;
+  clearTimeout(news.timer);  // hold the current story while the tile is turned over
   $("picker-msg").textContent = "loading…";
-  $("picker").classList.remove("hidden");
+  $("picker-grid").innerHTML = "";
+  flipTile($("news"), true);
   try {
     const r = await getJSON("/api/news/categories");
     picker.available = r.available;
     picker.selected = r.selected.slice();
-    $("picker-msg").textContent = r.error ? "category list may be out of date" : "";
+    $("picker-msg").textContent = r.error ? "list may be out of date" : "";
   } catch (e) {
     $("picker-msg").textContent = "couldn't load categories";
   }
   renderPicker();
+}
+
+function closePicker() {
+  if (!picker.open) return;
+  picker.open = false;
+  flipTile($("news"), false);
+  news.timer = setTimeout(nextStory, 8000);
 }
 
 function renderPicker() {
@@ -242,7 +263,7 @@ $("picker-grid").addEventListener("click", (e) => {
   if (k >= 0) picker.selected.splice(k, 1); else picker.selected.push(c);
   renderPicker();
 });
-$("picker-cancel").addEventListener("click", () => $("picker").classList.add("hidden"));
+$("picker-cancel").addEventListener("click", closePicker);
 $("picker-save").addEventListener("click", async () => {
   $("picker-save").disabled = true;
   $("picker-msg").textContent = "saving…";
@@ -253,16 +274,24 @@ $("picker-save").addEventListener("click", async () => {
     });
     const j = await r.json();
     if (!r.ok) throw new Error(j.error || "HTTP " + r.status);
+    picker.open = false;
+    flipTile($("news"), false);
     news.stories = [];
     news.i = -1;
     applyNews(j);
-    $("picker").classList.add("hidden");
   } catch (e) {
     $("picker-msg").textContent = "not saved: " + e.message;
     $("picker-save").disabled = false;
   }
 });
-$("news").addEventListener("contextmenu", (e) => { e.preventDefault(); openPicker(); });
+$("news").addEventListener("contextmenu", (e) => {
+  e.preventDefault();
+  if (picker.open) closePicker(); else openPicker();
+});
+// A click anywhere outside the turned-over tile turns it back (like Metro), without saving.
+document.addEventListener("mousedown", (e) => {
+  if (picker.open && !$("news").contains(e.target)) closePicker();
+});
 
 /* ---------------------------------------------------------------- github */
 
@@ -393,7 +422,7 @@ $("tv").addEventListener("click", () => {
   $("tv-mute").classList.toggle("on", !v.muted);
   showOverlay(8000);
 });
-$("news").addEventListener("click", nextStory);
+$("news").addEventListener("click", () => { if (!picker.open) nextStory(); });
 document.body.classList.add("idle");
 
 /* ---------------------------------------------------------------- health */

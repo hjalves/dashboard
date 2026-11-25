@@ -20,8 +20,9 @@ a big jump in the clock (suspend/resume) refreshes everything and restarts the v
 ## Input
 
 No keyboard needed. With a mouse: click the TV to toggle sound, click the news to skip ahead,
-**right-click the news to choose its Kagi categories** (click tiles to add/remove; the numbers are
-the rotation order; save). The choice is stored in `~/.local/state/dashboard/state.json` and
+**right-click the news to turn the tile over** (Metro style) and choose its Kagi categories on
+the back: click to add/remove, the numbers are the rotation order, save; cancel, a second
+right-click or a click outside turns it back unchanged. The choice is stored in `~/.local/state/dashboard/state.json` and
 overrides `[news] categories` in config.toml (delete the file to go back to the config). Saving
 needs the `X-Dashboard: 1` header, so other web pages can't change it. The cursor hides after 3 s.
 

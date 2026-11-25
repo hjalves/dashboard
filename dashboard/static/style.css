@@ -192,7 +192,12 @@ body.idle .tv-mute:not(.on) { opacity: 0; }
 .tile.flip-in { animation: flip-in .22s ease-out; }
 @keyframes flip-out { to { transform: perspective(2400px) rotateY(-90deg); } }
 @keyframes flip-in { from { transform: perspective(2400px) rotateY(90deg); } }
-.weather-hourly .tile-back { background: #06355f; gap: 1.6rem; }
+.src-back { background: #06355f !important; gap: 1.6rem; }
+.weather-now .src-back { gap: 1rem; padding: 2rem 2.2rem 1.6rem; }
+.weather-now .src-back .back-title { font-size: 2.6rem; }
+.weather-now .src { padding: 1rem 1.2rem; }
+.weather-now .src-name { font-size: 2rem; }
+.weather-now .src-desc { font-size: 1.3rem; }
 .src-options { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; min-height: 0; }
 .src { padding: 1.4rem 1.8rem; background: rgba(255, 255, 255, .07); cursor: pointer; transition: background .15s;
   display: flex; flex-direction: column; justify-content: flex-end; }

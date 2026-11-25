@@ -308,31 +308,46 @@ $("picker-save").addEventListener("click", async () => {
 });
 onRightClick($("news"), openPicker);
 
-/* Forecast tile back: MET Norway or IPMA. */
-async function openSource() {
-  $("wx-msg").textContent = "";
-  showBack($("weather-hourly"));
-  try {
-    const r = await getJSON("/api/weather/source");
-    document.querySelectorAll("#wx-back .src").forEach((el) => el.classList.toggle("on", el.dataset.src === r.source));
-  } catch (e) {
-    $("wx-msg").textContent = "couldn't load the current source";
-  }
-}
-$("wx-back").addEventListener("click", async (e) => {
-  const opt = e.target.closest(".src");
-  if (!opt) return;
-  $("wx-msg").textContent = "switching…";
-  try {
-    await postJSON("/api/weather/source", { source: opt.dataset.src });
-    hideBack();
-    await loadWeather();
-  } catch (err) {
-    $("wx-msg").textContent = "not changed: " + err.message;
-  }
+/* Weather tiles' back (both "now" and the forecast): MET Norway or IPMA. */
+const SOURCE_BACK = `<div class="back-title">forecast source</div>
+  <div class="src-options">
+    <div class="src" data-src="metno"><div class="src-name">MET Norway</div>
+      <div class="src-desc">rain in mm · hourly for about 2½ days · Norwegian Meteorological Institute</div></div>
+    <div class="src" data-src="ipma"><div class="src-name">IPMA</div>
+      <div class="src-desc">rain chance · hourly for about 3 days · Portugal's national weather service</div></div>
+  </div>
+  <div class="picker-foot"><span class="picker-msg"></span><button class="btn">cancel</button></div>`;
+
+document.querySelectorAll(".src-back").forEach((back) => {
+  back.innerHTML = SOURCE_BACK;
+  const tile = back.closest(".tile"), msg = back.querySelector(".picker-msg");
+  back.querySelector(".btn").addEventListener("click", hideBack);
+  back.addEventListener("click", async (e) => {
+    const opt = e.target.closest(".src");
+    if (!opt) return;
+    msg.textContent = "switching…";
+    try {
+      await postJSON("/api/weather/source", { source: opt.dataset.src });
+      hideBack();
+      await loadWeather();
+    } catch (err) {
+      msg.textContent = "not changed: " + err.message;
+    }
+  });
+  onRightClick(tile, async () => {
+    msg.textContent = "";
+    showBack(tile);
+    try {
+      const r = await getJSON("/api/weather/source");
+      back.querySelectorAll(".src").forEach((el) => el.classList.toggle("on", el.dataset.src === r.source));
+    } catch (e) {
+      msg.textContent = "couldn't load the current source";
+    }
+  });
 });
-$("wx-cancel").addEventListener("click", hideBack);
-onRightClick($("weather-hourly"), openSource);
+
+// No browser context menu anywhere: this is a kiosk; tiles with settings handle right-click above.
+document.addEventListener("contextmenu", (e) => e.preventDefault());
 
 async function postJSON(url, body) {
   const r = await fetch(url, {

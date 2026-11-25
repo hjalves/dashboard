@@ -23,6 +23,15 @@ log = logging.getLogger("dashboard")
 STATIC = Path(__file__).parent / "static"
 
 
+class RevalidatedStatic(StaticFiles):
+    """Static files the browser must revalidate (cheap 304s), so a deploy's reload gets new code."""
+
+    def file_response(self, *args, **kwargs):
+        resp = super().file_response(*args, **kwargs)
+        resp.headers["Cache-Control"] = "no-cache"
+        return resp
+
+
 class Cached:
     def __init__(self, name: str, ttl: float, fetch, retry: float = 60):
         self.name, self.ttl, self.fetch, self.retry = name, ttl, fetch, retry
@@ -136,7 +145,7 @@ def build_app(cfg: dict) -> Starlette:
             Route("/api/tv", tv_ep),
             Route("/api/version", version),
             Route("/api/stats", stats, methods=["GET", "POST"]),
-            Mount("/static", StaticFiles(directory=STATIC), name="static"),
+            Mount("/static", RevalidatedStatic(directory=STATIC), name="static"),
         ],
         lifespan=lifespan,
     )

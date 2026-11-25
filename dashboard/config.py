@@ -11,7 +11,7 @@ DEFAULTS = {
     "listen": {"host": "0.0.0.0", "port": 8001},
     "weather": {
         # IPMA globalIdLocal (see https://api.ipma.pt/public-data/forecast/locations.json)
-        "ipma_location": 1110600,
+        "ipma_location": 1050800,  # Proença-a-Nova
         "hours": 24,
         # Router's ubus endpoint for weatherd (anonymous read). Empty disables the station.
         "station_ubus": "http://192.168.0.254/ubus",

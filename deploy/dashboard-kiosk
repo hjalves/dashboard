@@ -1,12 +1,16 @@
 #!/bin/bash
-# Fullscreen Firefox on the dashboard, with its own profile. Restarts the browser if it exits.
+# Dashboard browser window with its own Firefox profile; restarts the browser if it exits.
+# Not --kiosk: that covers the XFCE panel. Instead the window has app_id "dashboard", which a
+# labwc window rule maximizes without decorations (see README), and userChrome.css hides the UI.
 URL=${DASHBOARD_URL:-http://localhost:8001/}
 PROFILE=${XDG_DATA_HOME:-$HOME/.local/share}/dashboard/firefox
-mkdir -p "$PROFILE"
-cp -f "$HOME/apps/dashboard/deploy/user.js" "$PROFILE/user.js"
+SRC=$HOME/apps/dashboard/deploy
+mkdir -p "$PROFILE/chrome"
+cp -f "$SRC/user.js" "$PROFILE/user.js"
+cp -f "$SRC/userChrome.css" "$PROFILE/chrome/userChrome.css"
 
 until curl -sf -o /dev/null "$URL"; do sleep 2; done
 while true; do
-    firefox --kiosk --no-remote --profile "$PROFILE" "$URL"
+    firefox --no-remote --name dashboard --class dashboard --profile "$PROFILE" "$URL"
     sleep 3
 done

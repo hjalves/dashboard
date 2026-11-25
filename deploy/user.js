@@ -17,3 +17,8 @@ user_pref("media.autoplay.blocking_policy", 0);
 // Hardware video decode where the driver allows it.
 user_pref("media.ffmpeg.vaapi.enabled", true);
 user_pref("media.hardware-video-decoding.force-enabled", true);
+// Windowed mode (panel stays visible): userChrome.css hides the browser UI, no client-side titlebar.
+user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);
+user_pref("browser.tabs.inTitlebar", 0);
+user_pref("sidebar.revamp", false);
+user_pref("sidebar.verticalTabs", false);

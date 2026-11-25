@@ -1,0 +1,4 @@
+/* Dashboard profile: no tabs, toolbars or sidebar, just the page. */
+#TabsToolbar, #nav-bar, #PersonalToolbar, #titlebar, #sidebar-main, #sidebar-box,
+#sidebar-splitter, #toolbar-menubar { visibility: collapse !important; }
+#navigator-toolbox { border: none !important; min-height: 0 !important; }

@@ -5,8 +5,8 @@ host = "0.0.0.0"
 port = 8001
 
 [weather]
-# IPMA globalIdLocal: https://api.ipma.pt/public-data/forecast/locations.json (1110600 = Lisboa)
-ipma_location = 1110600
+# IPMA globalIdLocal: https://api.ipma.pt/public-data/forecast/locations.json (1050800 = Proença-a-Nova, 1110600 = Lisboa)
+ipma_location = 1050800
 hours = 24
 # weatherd on the router (anonymous ubus read); "" to hide the station
 station_ubus = "http://192.168.0.254/ubus"

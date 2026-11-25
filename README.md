@@ -44,8 +44,20 @@ deploy/install.sh           # commit first: it deploys HEAD
 
 Installs to `~/apps/dashboard` (uv env with uv-managed Python), the user unit
 `dashboard.service`, `~/.local/bin/dashboard-kiosk` and its autostart entry
-(`~/.config/autostart/dashboard-kiosk.desktop`). The kiosk uses its own Firefox profile in
-`~/.local/share/dashboard/firefox` with `deploy/user.js`.
+(`~/.config/autostart/dashboard-kiosk.desktop`). The browser uses its own Firefox profile in
+`~/.local/share/dashboard/firefox` with `deploy/user.js` and `deploy/userChrome.css`.
+
+The browser is a normal window, not `--kiosk`, so the XFCE panel stays visible: its Wayland app_id
+is `dashboard`, and this rule in `~/.config/xfce4/labwc/rc.xml` (added by hand, not by install.sh)
+maximizes it without a titlebar:
+
+```xml
+<windowRules>
+  <windowRule identifier="dashboard" serverDecoration="no">
+    <action name="Maximize"/>
+  </windowRule>
+</windowRules>
+```
 
 Notes:
 - RTP answers `204` to requests with a foreign `Referer`, so the page sets `referrer=no-referrer`.

@@ -195,6 +195,12 @@ async def fetch_forecast(location: int, hours: int) -> dict:
 # ---------------------------------------------------------------- news
 
 KAGI = "https://news.kagi.com/"
+# Kagi's text cites sources inline as "[example.com#1]"; the tile has no room for them.
+_CITE = re.compile(r"\s*\[[^\]\s]+#\d+\]")
+
+
+def _uncite(text):
+    return _CITE.sub("", text).strip() if text else text
 
 
 async def fetch_news(categories: list[str], per_category: int) -> dict:
@@ -215,8 +221,8 @@ async def fetch_news(categories: list[str], per_category: int) -> dict:
         for cl in d.get("clusters", [])[:per_category]:
             img = cl.get("primary_image") or {}
             stories.append({
-                "title": cl.get("title"),
-                "summary": cl.get("short_summary"),
+                "title": _uncite(cl.get("title")),
+                "summary": _uncite(cl.get("short_summary")),
                 "emoji": cl.get("emoji"),
                 "topic": cl.get("category"),
                 "location": cl.get("location"),

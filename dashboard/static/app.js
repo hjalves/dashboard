@@ -58,6 +58,7 @@ async function loadWeather() {
 
   $("w-temp").textContent = deg(st ? st.temp : first && first.temp);
   $("w-desc").textContent = first ? first.desc || "" : "";
+  $("w-icon").innerHTML = first ? weatherIcon(first.type, first.day) : "";
   const hi = st && st.today_high != null ? st.today_high : today && today.max;
   const lo = st && st.today_low != null ? st.today_low : today && today.min;
   const hilo = [];
@@ -92,7 +93,7 @@ function renderDays(f) {
   const days = f ? f.daily.filter((d) => d.date > todayStr).slice(0, 2) : [];
   $("w-days").innerHTML = days.map((d) => {
     const name = new Date(d.date + "T12:00").toLocaleDateString("en-GB", { weekday: "long" }).toLowerCase();
-    return `<div class="day"><div class="label">${name}</div>
+    return `<div class="day"><div class="label">${name}</div>${weatherIcon(d.type, true)}
       <div class="hi">${deg(d.max)}<span class="lo">${deg(d.min)}</span></div>
       <div class="ddesc">${esc(d.desc || "")}</div>
       <div class="drain">rain <b>${d.rain_prob != null ? Math.round(d.rain_prob) + "%" : "--"}</b></div></div>`;
@@ -112,8 +113,9 @@ function drawChart() {
   const col = W / n;
   const x = (i) => col * i + col / 2;
 
-  // Bands: temperature labels+line on top, rain-probability bars below, hour labels at the bottom.
-  const hourY = H - 2, rainBot = H - 24, rainTop = rainBot - 34, lineTop = 28, lineBot = rainTop - 30;
+  // Bands, top to bottom: temperature labels + line, weather icons, rain-chance bars, hour labels.
+  const hourY = H - 2, rainBot = H - 24, barMax = 22, rainTop = rainBot - 34;
+  const iconTop = rainTop - 36, lineTop = 26, lineBot = iconTop - 8;
   const temps = hrs.map((h) => h.temp).filter((t) => t != null);
   const tmin = Math.min(...temps), tmax = Math.max(...temps);
   const span = Math.max(3, tmax - tmin);
@@ -141,12 +143,12 @@ function drawChart() {
       // Label every other hour (and the first) so values never collide.
       if (i % 2 === 0 || n <= 8) out += `<text class="t" x="${x(i)}" y="${y(h.temp) - 11}" text-anchor="middle">${Math.round(h.temp)}°</text>`;
     }
-    const bw = Math.min(26, col - 14), bh = rainBot - rainTop;
+    const bw = Math.min(26, col - 14), bh = barMax;
     out += `<rect class="base" x="${x(i) - bw / 2}" y="${rainBot - 1}" width="${bw}" height="1"/>`;
     if (h.rain_prob) {
       const ph = Math.max(2, (h.rain_prob / 100) * bh);
       out += `<rect class="bar" x="${x(i) - bw / 2}" y="${rainBot - ph}" width="${bw}" height="${ph}" rx="2"/>`;
-      if (h.rain_prob >= 30) out += `<text class="p" x="${x(i)}" y="${rainTop - 4}" text-anchor="middle">${Math.round(h.rain_prob)}%</text>`;
+      if (h.rain_prob >= 30) out += `<text class="p" x="${x(i)}" y="${rainBot - ph - 4}" text-anchor="middle">${Math.round(h.rain_prob)}%</text>`;
     }
     out += `<text class="hour" x="${x(i)}" y="${hourY}" text-anchor="middle">${String(t.getHours()).padStart(2, "0")}</text>`;
     const tip = `${hhmm(t)} · ${h.temp != null ? Math.round(h.temp) + "°" : "--"} · ${h.desc || ""} · rain ${h.rain_prob ?? "?"}% · wind ${h.wind_kmh ?? "?"} km/h ${h.wind_dir || ""}`;
@@ -154,6 +156,8 @@ function drawChart() {
   });
   svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
   svg.innerHTML = out;
+  $("w-hicons").innerHTML = hrs.map((h, i) =>
+    weatherIcon(h.type, h.day).replace('style="', `style="left:${x(i)}px;top:${iconTop}px;`)).join("");
 }
 
 /* ---------------------------------------------------------------- news */

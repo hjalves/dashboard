@@ -82,14 +82,17 @@ body.idle, body.idle * { cursor: none !important; }
 .fc-hours { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .days { display: flex; gap: 2.4rem; }
 .day { width: 13rem; display: flex; flex-direction: column; padding-left: 2.4rem; border-left: 1px solid rgba(255, 255, 255, .18); }
-.day .hi { font-size: 4.6rem; font-weight: 300; line-height: 1; margin-top: auto; }
+.day .hi { font-size: 4.2rem; font-weight: 300; line-height: 1; margin-top: auto; }
 .day .lo { font-size: 2.4rem; font-weight: 300; color: var(--ink-3); margin-left: .4rem; }
 .day .ddesc { font-size: 1.6rem; line-height: 1.25; color: var(--ink-2); margin-top: .8rem; min-height: 4rem;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .day .drain { font-size: 1.5rem; color: var(--ink-3); margin-top: .6rem; }
 .day .drain b { font-weight: 400; color: var(--ink); }
 .where { color: var(--ink-3); margin-left: .6rem; text-transform: none; }
-#w-chart { flex: 1; width: 100%; margin-top: .8rem; overflow: visible; }
+.chart-wrap { flex: 1; position: relative; margin-top: .8rem; min-height: 0; }
+#w-chart { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+#w-hicons { position: absolute; inset: 0; pointer-events: none; }
+#w-hicons .wi { position: absolute; width: 36px; height: 36px; margin-left: -18px; }
 #w-chart text { fill: var(--ink); font-family: inherit; }
 #w-chart .hour { fill: var(--ink-3); font-size: 15px; }
 #w-chart .t { font-size: 19px; font-weight: 400; }
@@ -171,6 +174,12 @@ body.idle .tv-mute:not(.on) { opacity: 0; }
 .gh .lang::before { content: ""; display: inline-block; width: .9rem; height: .9rem; margin-right: .6rem; background: var(--c, #888); }
 .gh .label-top { font-size: 1.5rem; color: var(--ink-3); text-transform: lowercase; margin-bottom: .2rem; }
 #gh0 .when, #gh0 .sub, #gh0 .foot, #gh0 .label-top { color: rgba(255, 255, 255, .7); }
+
+/* Meteocons monochrome icons, tinted with the text colour through a mask. */
+.wi { display: inline-block; flex: none; background: currentColor;
+  -webkit-mask: var(--icon) center / contain no-repeat; mask: var(--icon) center / contain no-repeat; }
+#w-icon .wi { position: absolute; top: .6rem; right: 1.2rem; width: 10rem; height: 10rem; }
+.day .wi { width: 6.4rem; height: 6.4rem; margin: .2rem 0 0 -.9rem; }
 
 /* ---------------------------------------------------------------- misc */
 .fade-in { animation: fade .6s ease both; }

@@ -26,8 +26,10 @@ cursor hides after 3 s.
 
 12-column grid, three rows; 1 rem = 1/108 of the screen height, so it scales to any 16:9 monitor.
 Fonts: Selawik (Microsoft's open Segoe UI substitute, OFL, vendored in `static/fonts`).
-No weather icons on purpose: IPMA's icons are colourful/skeuomorphic and a home-made icon set would
-need an id→icon table, so the tile shows IPMA's description text and a temperature/rain-chance chart.
+Weather icons: Meteocons' monochrome set (MIT, Bas Milius, vendored in `static/icons`, only the
+33 used), tinted with the text colour via CSS masks. IPMA's own icons are colourful and skeuomorphic,
+so `static/icons.js` maps IPMA's weather-type numbers to Meteocons names by hand, with day/night
+variants from the forecast hour's sun position. Types not in the table show text only.
 
 ## Develop
 

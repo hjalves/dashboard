@@ -21,6 +21,7 @@
     <div class="label">weather</div>
     <div class="now-main">
       <div class="temp" id="w-temp">--°</div>
+      <div id="w-icon"></div>
       <div class="now-side">
         <div class="desc" id="w-desc"></div>
         <div class="hilo" id="w-hilo"></div>
@@ -33,7 +34,7 @@
   <section class="tile weather-hourly" id="weather-hourly">
     <div class="fc-hours">
       <div class="label">next hours <span class="where" id="w-where"></span><span class="key">rain chance</span></div>
-      <svg id="w-chart" preserveAspectRatio="none"></svg>
+      <div class="chart-wrap"><svg id="w-chart" preserveAspectRatio="none"></svg><div id="w-hicons"></div></div>
     </div>
     <div class="days" id="w-days"></div>
   </section>
@@ -67,6 +68,7 @@
 
 </main>
 <script src="/static/vendor/hls.min.js"></script>
+<script src="/static/icons.js"></script>
 <script src="/static/app.js"></script>
 </body>
 </html>

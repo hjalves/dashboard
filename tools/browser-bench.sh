@@ -2,7 +2,8 @@
 # Compare browsers showing the dashboard: whole-system CPU, the browser's own CPU and memory (PSS),
 # whether the VA-API driver is loaded, and video frames dropped (from the page's /api/stats).
 # Run on the dashboard machine inside the graphical session's environment (WAYLAND_DISPLAY set).
-# Usage: browser-bench.sh [warmup_s] [measure_s]   Results: /tmp/browser-bench.txt
+# Usage: [ONLY="firefox chromium chromium-vaapi"] browser-bench.sh [warmup_s] [measure_s]
+# Results are appended to /tmp/browser-bench.txt
 set -u
 WARM=${1:-45}; DUR=${2:-120}
 URL=http://localhost:8001/
@@ -21,8 +22,10 @@ sys() { awk '/^cpu /{print $2+$3+$4+$5+$6+$7+$8, $5+$6}' /proc/stat; }
 frames() { curl -s ${URL%/}/api/stats | python3 -c 'import json,sys
 d=json.load(sys.stdin).get("video",{}); print(d.get("total_frames") or 0, d.get("dropped_frames") or 0, d.get("height") or 0)'; }
 
+ONLY=${ONLY:-firefox chromium chromium-vaapi}
 run() {  # name, exe-prefix, command...
     local name=$1 exe=$2; shift 2
+    [[ " $ONLY " == *" $name "* ]] || return 0
     "$@" >/dev/null 2>&1 &
     local launcher=$!
     sleep "$WARM"
@@ -46,5 +49,5 @@ crprof() {  # fresh profile using the system titlebar, which the labwc rule then
     rm -rf $CRPROF; mkdir -p $CRPROF/Default
     echo '{"browser":{"custom_chrome_frame":false}}' > $CRPROF/Default/Preferences
 }
-crprof; run chromium /usr/lib/chromium/chromium chromium "${CR_COMMON[@]}"
-crprof; run chromium-vaapi /usr/lib/chromium/chromium chromium "${CR_COMMON[@]}" $CR_VAAPI
+[[ $ONLY == *chromium* ]] && crprof; run chromium /usr/lib/chromium/chromium chromium "${CR_COMMON[@]}"
+[[ $ONLY == *chromium* ]] && crprof; run chromium-vaapi /usr/lib/chromium/chromium chromium "${CR_COMMON[@]}" $CR_VAAPI

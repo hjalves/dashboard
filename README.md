@@ -62,3 +62,20 @@ maximizes it without a titlebar:
 Notes:
 - RTP answers `204` to requests with a foreign `Referer`, so the page sets `referrer=no-referrer`.
 - The GitHub token comes from `gh auth token` (keyring) unless `GITHUB_TOKEN` is set in the unit.
+
+## Browser choice
+
+Measured on asus-arch (i5-2450M, HD 3000, `libva-intel-driver`) on 2026-11-25 with
+`tools/browser-bench.sh`: 45–60 s warm-up, then 120 s with the dashboard and RTP Notícias playing,
+the window maximized below the panel in every case. No frames were dropped in any run.
+
+| Browser | Video decode | Whole system CPU (4 threads) | Browser memory (PSS) | Video |
+|---|---|---|---|---|
+| **Firefox 161** (`media.ffmpeg.vaapi.enabled`) | GPU (VA-API) | **20.6 %** | 835 MiB | 720p |
+| Chromium 158, default | software | 24.2 % | 584 MiB | 720p |
+| Chromium 158 + `AcceleratedVideoDecodeLinuxGL` etc. | GPU (VA-API) | 19.0–22.8 % | ~615 MiB | 360–504p (ABR picked lower) |
+
+Firefox stays: the lowest CPU at full 720p. Chromium only matches it with extra feature flags and
+then picked lower video quality; it uses ~250 MiB less memory, which doesn't matter with 7.5 GB.
+Chromium's `--app` window (app_id `chrome-localhost__-Default`, `--start-maximized`, profile pref
+`browser.custom_chrome_frame=false`) would avoid the userChrome.css trick if Firefox ever regresses.

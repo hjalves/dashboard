@@ -216,8 +216,10 @@ function nextStory() {
   if (s.image) { const im = new Image(); im.onload = im.onerror = show; im.src = s.image; } else show();
 }
 
-/* Right-click the news tile: it turns over and shows its categories (saved on the server). */
-const picker = { available: [], selected: [], open: false };
+/* ---------------------------------------------------------------- tile backs */
+/* Right-click turns a tile over (Metro style) to show its settings; one tile at a time.
+   Cancel, a second right-click or a click outside the tile turns it back. */
+let backTile = null;  // { el, onClose }
 
 function flipTile(tile, toBack) {
   tile.classList.add("flip-out");
@@ -228,14 +230,37 @@ function flipTile(tile, toBack) {
     setTimeout(() => tile.classList.remove("flip-in"), 240);
   }, 180);
 }
+function showBack(el, onClose) {
+  if (backTile) hideBack();
+  backTile = { el, onClose };
+  flipTile(el, true);
+}
+function hideBack() {
+  if (!backTile) return;
+  const t = backTile;
+  backTile = null;
+  flipTile(t.el, false);
+  if (t.onClose) t.onClose();
+}
+const isBack = (el) => backTile && backTile.el === el;
+function onRightClick(el, open) {
+  el.addEventListener("contextmenu", (e) => {
+    e.preventDefault();
+    if (isBack(el)) hideBack(); else open();
+  });
+}
+document.addEventListener("mousedown", (e) => {
+  if (backTile && !backTile.el.contains(e.target)) hideBack();
+});
+
+/* News tile back: Kagi categories (saved on the server). */
+const picker = { available: [], selected: [] };
 
 async function openPicker() {
-  if (picker.open) return;
-  picker.open = true;
   clearTimeout(news.timer);  // hold the current story while the tile is turned over
   $("picker-msg").textContent = "loading…";
   $("picker-grid").innerHTML = "";
-  flipTile($("news"), true);
+  showBack($("news"), () => { clearTimeout(news.timer); news.timer = setTimeout(nextStory, 8000); });
   try {
     const r = await getJSON("/api/news/categories");
     picker.available = r.available;
@@ -245,13 +270,6 @@ async function openPicker() {
     $("picker-msg").textContent = "couldn't load categories";
   }
   renderPicker();
-}
-
-function closePicker() {
-  if (!picker.open) return;
-  picker.open = false;
-  flipTile($("news"), false);
-  news.timer = setTimeout(nextStory, 8000);
 }
 
 function renderPicker() {
@@ -273,19 +291,13 @@ $("picker-grid").addEventListener("click", (e) => {
   if (k >= 0) picker.selected.splice(k, 1); else picker.selected.push(c);
   renderPicker();
 });
-$("picker-cancel").addEventListener("click", closePicker);
+$("picker-cancel").addEventListener("click", hideBack);
 $("picker-save").addEventListener("click", async () => {
   $("picker-save").disabled = true;
   $("picker-msg").textContent = "saving…";
   try {
-    const r = await fetch("/api/news/categories", {
-      method: "POST", headers: { "Content-Type": "application/json", "X-Dashboard": "1" },
-      body: JSON.stringify({ selected: picker.selected }),
-    });
-    const j = await r.json();
-    if (!r.ok) throw new Error(j.error || "HTTP " + r.status);
-    picker.open = false;
-    flipTile($("news"), false);
+    const j = await postJSON("/api/news/categories", { selected: picker.selected });
+    hideBack();
     news.stories = [];
     news.i = -1;
     applyNews(j);
@@ -294,14 +306,42 @@ $("picker-save").addEventListener("click", async () => {
     $("picker-save").disabled = false;
   }
 });
-$("news").addEventListener("contextmenu", (e) => {
-  e.preventDefault();
-  if (picker.open) closePicker(); else openPicker();
+onRightClick($("news"), openPicker);
+
+/* Forecast tile back: MET Norway or IPMA. */
+async function openSource() {
+  $("wx-msg").textContent = "";
+  showBack($("weather-hourly"));
+  try {
+    const r = await getJSON("/api/weather/source");
+    document.querySelectorAll("#wx-back .src").forEach((el) => el.classList.toggle("on", el.dataset.src === r.source));
+  } catch (e) {
+    $("wx-msg").textContent = "couldn't load the current source";
+  }
+}
+$("wx-back").addEventListener("click", async (e) => {
+  const opt = e.target.closest(".src");
+  if (!opt) return;
+  $("wx-msg").textContent = "switching…";
+  try {
+    await postJSON("/api/weather/source", { source: opt.dataset.src });
+    hideBack();
+    await loadWeather();
+  } catch (err) {
+    $("wx-msg").textContent = "not changed: " + err.message;
+  }
 });
-// A click anywhere outside the turned-over tile turns it back (like Metro), without saving.
-document.addEventListener("mousedown", (e) => {
-  if (picker.open && !$("news").contains(e.target)) closePicker();
-});
+$("wx-cancel").addEventListener("click", hideBack);
+onRightClick($("weather-hourly"), openSource);
+
+async function postJSON(url, body) {
+  const r = await fetch(url, {
+    method: "POST", headers: { "Content-Type": "application/json", "X-Dashboard": "1" }, body: JSON.stringify(body),
+  });
+  const j = await r.json();
+  if (!r.ok) throw new Error(j.error || "HTTP " + r.status);
+  return j;
+}
 
 /* ---------------------------------------------------------------- github */
 
@@ -432,7 +472,7 @@ $("tv").addEventListener("click", () => {
   $("tv-mute").classList.toggle("on", !v.muted);
   showOverlay(8000);
 });
-$("news").addEventListener("click", () => { if (!picker.open) nextStory(); });
+$("news").addEventListener("click", () => { if (!isBack($("news"))) nextStory(); });
 document.body.classList.add("idle");
 
 /* ---------------------------------------------------------------- health */

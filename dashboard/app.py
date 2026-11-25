@@ -72,15 +72,21 @@ def build_app(cfg: dict) -> Starlette:
     w, n, g, t = cfg["weather"], cfg["news"], cfg["github"], cfg["tv"]
 
     station = Cached("station", 60, lambda: sources.fetch_station(w["station_ubus"])) if w["station_ubus"] else None
-    if w["source"] == "ipma":
-        fetch = lambda: sources.fetch_ipma(int(w["ipma_location"]), int(w["hours"]))  # noqa: E731
-    else:
-        # MET Norway asks clients not to poll more often than the data's Expires (about 30 min).
-        fetch = lambda: sources.fetch_metno(float(w["latitude"]), float(w["longitude"]),  # noqa: E731
-                                            w["place"], int(w["hours"]))
-    forecast = Cached("forecast", 1800, fetch)
-    # News categories: config.toml, unless changed from the page (right-click the tile) → state.json.
+    # Settings changed from the page (right-click a tile) live in state.json and override config.toml.
     state = config.load_state()
+    SOURCES = ("metno", "ipma")
+
+    def weather_source() -> str:
+        src = state.get("weather_source") or w["source"]
+        return src if src in SOURCES else "metno"
+
+    async def fetch_forecast():
+        if weather_source() == "ipma":
+            return await sources.fetch_ipma(int(w["ipma_location"]), int(w["hours"]))
+        # MET Norway asks clients not to poll more often than the data's Expires (about 30 min).
+        return await sources.fetch_metno(float(w["latitude"]), float(w["longitude"]), w["place"], int(w["hours"]))
+
+    forecast = Cached("forecast", 1800, fetch_forecast)
 
     def news_categories() -> list[str]:
         return list(state.get("news_categories") or n["categories"])
@@ -105,10 +111,29 @@ def build_app(cfg: dict) -> Starlette:
     async def news_ep(_):
         return JSONResponse(await news.get())
 
+    def csrf_ok(req) -> bool:
+        # Custom header: a plain cross-site form or fetch can't send it.
+        return req.headers.get("x-dashboard") == "1"
+
+    async def weather_source_ep(req):
+        if req.method == "POST":
+            if not csrf_ok(req):
+                return JSONResponse({"error": "missing X-Dashboard header"}, status_code=403)
+            src = (await req.json()).get("source")
+            if src not in SOURCES:
+                return JSONResponse({"error": f"source must be one of {SOURCES}"}, status_code=400)
+            if src != weather_source():
+                state["weather_source"] = src
+                config.save_state(state)
+                forecast.updated = 0.0  # refetch from the new source
+                forecast.error = None
+                forecast.data = None
+                log.info("forecast source set to %s", src)
+        return JSONResponse({"source": weather_source(), "available": list(SOURCES)})
+
     async def news_categories_ep(req):
         if req.method == "POST":
-            # Custom header: a plain cross-site form or fetch can't send it (CSRF guard).
-            if req.headers.get("x-dashboard") != "1":
+            if not csrf_ok(req):
                 return JSONResponse({"error": "missing X-Dashboard header"}, status_code=403)
             body = await req.json()
             available = (await kagi_categories.get())["data"] or []
@@ -176,6 +201,7 @@ def build_app(cfg: dict) -> Starlette:
         routes=[
             Route("/", index),
             Route("/api/weather", weather),
+            Route("/api/weather/source", weather_source_ep, methods=["GET", "POST"]),
             Route("/api/news", news_ep),
             Route("/api/news/categories", news_categories_ep, methods=["GET", "POST"]),
             Route("/api/github", github_ep),

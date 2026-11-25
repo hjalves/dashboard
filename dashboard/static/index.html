@@ -37,6 +37,24 @@
       <div class="chart-wrap"><svg id="w-chart" preserveAspectRatio="none"></svg><div id="w-hicons"></div></div>
     </div>
     <div class="days" id="w-days"></div>
+    <!-- Back of the tile (right-click): forecast source. -->
+    <div class="tile-back" id="wx-back">
+      <div class="back-title">forecast source</div>
+      <div class="src-options">
+        <div class="src" data-src="metno">
+          <div class="src-name">MET Norway</div>
+          <div class="src-desc">rain in mm · hourly for about 2½ days · Norwegian Meteorological Institute</div>
+        </div>
+        <div class="src" data-src="ipma">
+          <div class="src-name">IPMA</div>
+          <div class="src-desc">rain chance · hourly for about 3 days · Portugal's national weather service</div>
+        </div>
+      </div>
+      <div class="picker-foot">
+        <span class="picker-msg" id="wx-msg"></span>
+        <button class="btn" id="wx-cancel">cancel</button>
+      </div>
+    </div>
   </section>
 
   <section class="tile tv" id="tv">

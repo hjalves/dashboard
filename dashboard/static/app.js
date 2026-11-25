@@ -82,7 +82,21 @@ async function loadWeather() {
     : stationAge != null && stationAge > 900 ? "station " + ago(st.time * 1000)
     : w.station && !w.station.ok ? "station offline" : "";
   $("w-where").textContent = f && f.location ? "· " + f.location : "";
+  renderDays(f);
   drawChart();
+}
+
+/* Tomorrow and the day after, from IPMA's daily forecast. */
+function renderDays(f) {
+  const todayStr = new Date().toLocaleDateString("sv-SE");
+  const days = f ? f.daily.filter((d) => d.date > todayStr).slice(0, 2) : [];
+  $("w-days").innerHTML = days.map((d) => {
+    const name = new Date(d.date + "T12:00").toLocaleDateString("en-GB", { weekday: "long" }).toLowerCase();
+    return `<div class="day"><div class="label">${name}</div>
+      <div class="hi">${deg(d.max)}<span class="lo">${deg(d.min)}</span></div>
+      <div class="ddesc">${esc(d.desc || "")}</div>
+      <div class="drain">rain <b>${d.rain_prob != null ? Math.round(d.rain_prob) + "%" : "--"}</b></div></div>`;
+  }).join("");
 }
 
 function nextSunrise(rise) {

@@ -8,7 +8,7 @@ fetches and caches every source; the page is plain HTML/CSS/JS shown fullscreen 
 |---|---|---|
 | clock | browser | every second |
 | weather now | WS2900 station via the router's weatherd (`/ubus`, anonymous read) | 1 min |
-| next hours | IPMA hourly forecast (`aggregate/<id>.json`) + IPMA's own weather-type text | 30 min |
+| forecast | IPMA hourly forecast (`aggregate/<id>.json`) for the next hours, plus the daily forecast for the next two days, with IPMA's own weather-type text | 30 min |
 | news | Kagi News (`news.kagi.com/<category>.json`), categories rotate every 14 s | 30 min |
 | github | GraphQL: your repos by last push, with their latest commits | 5 min |
 | tv | M3UPT playlist (channel looked up by name) + its XMLTV EPG; plays with hls.js | 6 h |

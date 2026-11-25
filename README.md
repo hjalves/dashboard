@@ -39,11 +39,12 @@ uv run dashboard            # http://localhost:8001, config from ~/.config/dashb
 ## Deploy (asus-arch)
 
 ```bash
-deploy/install.sh           # commit first: it deploys HEAD
+git push && deploy/install.sh   # deploys what's on GitHub (origin/main)
 ```
 
-Installs to `~/apps/dashboard` (uv env with uv-managed Python), the user unit
-`dashboard.service`, `~/.local/bin/dashboard-kiosk` and its autostart entry
+`~/apps/dashboard` on asus-arch is a git clone of this repo: install.sh runs `git pull --ff-only`
+there (and refuses if the checkout has local changes), so `git log -1` there shows what's deployed.
+It also syncs the uv env (uv-managed Python) and installs the user unit `dashboard.service`, `~/.local/bin/dashboard-kiosk` and its autostart entry
 (`~/.config/autostart/dashboard-kiosk.desktop`). The browser uses its own Firefox profile in
 `~/.local/share/dashboard/firefox` with `deploy/user.js` and `deploy/userChrome.css`.
 

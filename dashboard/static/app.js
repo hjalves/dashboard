@@ -58,7 +58,7 @@ async function loadWeather() {
 
   $("w-temp").textContent = deg(st ? st.temp : first && first.temp);
   $("w-desc").textContent = first ? first.desc || "" : "";
-  $("w-icon").innerHTML = first ? weatherIcon(first.type, first.day) : "";
+  $("w-icon").innerHTML = first ? weatherIcon(first.symbol ?? first.type, first.day) : "";
   const hi = st && st.today_high != null ? st.today_high : today && today.max;
   const lo = st && st.today_low != null ? st.today_low : today && today.min;
   const hilo = [];
@@ -83,9 +83,14 @@ async function loadWeather() {
     : stationAge != null && stationAge > 900 ? "station " + ago(st.time * 1000)
     : w.station && !w.station.ok ? "station offline" : "";
   $("w-where").textContent = f && f.location ? "· " + f.location : "";
+  const mm = f && f.source === "metno";
+  $("w-key").textContent = mm ? "rain, mm" : "rain chance";
+  $("w-credit").textContent = f && f.credit ? "data: " + f.credit : "";
   renderDays(f);
   drawChart();
 }
+
+const fmtMM = (v) => (v === 0 ? "0" : v >= 10 ? String(Math.round(v)) : v.toFixed(1));
 
 /* Tomorrow and the day after, from IPMA's daily forecast. */
 function renderDays(f) {
@@ -93,10 +98,10 @@ function renderDays(f) {
   const days = f ? f.daily.filter((d) => d.date > todayStr).slice(0, 2) : [];
   $("w-days").innerHTML = days.map((d) => {
     const name = new Date(d.date + "T12:00").toLocaleDateString("en-GB", { weekday: "long" }).toLowerCase();
-    return `<div class="day"><div class="label">${name}</div>${weatherIcon(d.type, true)}
+    return `<div class="day"><div class="label">${name}</div>${weatherIcon(d.symbol ?? d.type, true)}
       <div class="hi">${deg(d.max)}<span class="lo">${deg(d.min)}</span></div>
       <div class="ddesc">${esc(d.desc || "")}</div>
-      <div class="drain">rain <b>${d.rain_prob != null ? Math.round(d.rain_prob) + "%" : "--"}</b></div></div>`;
+      <div class="drain">rain <b>${d.rain_mm != null ? fmtMM(d.rain_mm) + " mm" : d.rain_prob != null ? Math.round(d.rain_prob) + "%" : "--"}</b></div></div>`;
   }).join("");
 }
 
@@ -145,19 +150,24 @@ function drawChart() {
     }
     const bw = Math.min(26, col - 14), bh = barMax;
     out += `<rect class="base" x="${x(i) - bw / 2}" y="${rainBot - 1}" width="${bw}" height="1"/>`;
-    if (h.rain_prob) {
-      const ph = Math.max(2, (h.rain_prob / 100) * bh);
+    // Rain: MET Norway amounts (full bar = 4 mm/h, labelled from 0.2 mm), or IPMA probability.
+    const mmode = h.rain_mm !== undefined;
+    const frac = mmode ? Math.min(1, (h.rain_mm || 0) / 4) : (h.rain_prob || 0) / 100;
+    if (frac > 0) {
+      const ph = Math.max(2, frac * bh);
       out += `<rect class="bar" x="${x(i) - bw / 2}" y="${rainBot - ph}" width="${bw}" height="${ph}" rx="2"/>`;
-      if (h.rain_prob >= 30) out += `<text class="p" x="${x(i)}" y="${rainBot - ph - 4}" text-anchor="middle">${Math.round(h.rain_prob)}%</text>`;
+      const label = mmode ? (h.rain_mm >= 0.2 ? fmtMM(h.rain_mm) : "") : (h.rain_prob >= 30 ? Math.round(h.rain_prob) + "%" : "");
+      if (label) out += `<text class="p" x="${x(i)}" y="${rainBot - ph - 4}" text-anchor="middle">${label}</text>`;
     }
     out += `<text class="hour" x="${x(i)}" y="${hourY}" text-anchor="middle">${String(t.getHours()).padStart(2, "0")}</text>`;
-    const tip = `${hhmm(t)} · ${h.temp != null ? Math.round(h.temp) + "°" : "--"} · ${h.desc || ""} · rain ${h.rain_prob ?? "?"}% · wind ${h.wind_kmh ?? "?"} km/h ${h.wind_dir || ""}`;
+    const rainTxt = h.rain_mm !== undefined ? `${h.rain_mm ?? "?"} mm` : `${h.rain_prob ?? "?"}%`;
+    const tip = `${hhmm(t)} · ${h.temp != null ? Math.round(h.temp) + "°" : "--"} · ${h.desc || ""} · rain ${rainTxt} · wind ${h.wind_kmh ?? "?"} km/h`;
     out += `<rect x="${col * i}" y="0" width="${col}" height="${H}" fill="transparent"><title>${esc(tip)}</title></rect>`;
   });
   svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
   svg.innerHTML = out;
   $("w-hicons").innerHTML = hrs.map((h, i) =>
-    weatherIcon(h.type, h.day).replace('style="', `style="left:${x(i)}px;top:${iconTop}px;`)).join("");
+    weatherIcon(h.symbol ?? h.type, h.day).replace('style="', `style="left:${x(i)}px;top:${iconTop}px;`)).join("");
 }
 
 /* ---------------------------------------------------------------- news */

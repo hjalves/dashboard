@@ -11,7 +11,12 @@ from pathlib import Path
 DEFAULTS = {
     "listen": {"host": "0.0.0.0", "port": 8001},
     "weather": {
-        # IPMA globalIdLocal (see https://api.ipma.pt/public-data/forecast/locations.json)
+        # Forecast source: "metno" (MET Norway, rain in mm) or "ipma" (rain probability)
+        "source": "metno",
+        "place": "Proença-a-Nova",
+        "latitude": 39.7495,
+        "longitude": -7.9229,
+        # IPMA globalIdLocal, for source = "ipma" (https://api.ipma.pt/public-data/forecast/locations.json)
         "ipma_location": 1050800,  # Proença-a-Nova
         "hours": 24,
         # Router's ubus endpoint for weatherd (anonymous read). Empty disables the station.

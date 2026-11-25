@@ -100,6 +100,7 @@ body.idle, body.idle * { cursor: none !important; }
 #w-chart .line { fill: none; stroke: #fff; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
 #w-chart .bar { fill: rgba(140, 200, 255, .9); }
 #w-chart .base { fill: rgba(255, 255, 255, .22); }
+.credit { float: right; color: var(--ink-3); font-size: 1.4rem; text-transform: none; margin-right: 1.6rem; line-height: 2.2rem; }
 .key { float: right; text-transform: lowercase; color: var(--ink-3); font-size: 1.5rem; }
 .key::before { content: ""; display: inline-block; width: .9rem; height: 1.3rem; margin-right: .6rem; background: rgba(140, 200, 255, .9); vertical-align: -.1rem; }
 #w-chart .night { fill: rgba(0, 0, 0, .14); }

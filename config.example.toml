@@ -5,6 +5,12 @@ host = "0.0.0.0"
 port = 8001
 
 [weather]
+# Forecast: "metno" (MET Norway, hourly rain in mm) or "ipma" (rain probability)
+source = "metno"
+place = "Proença-a-Nova"
+latitude = 39.7495
+longitude = -7.9229
+# For source = "ipma":
 # IPMA globalIdLocal: https://api.ipma.pt/public-data/forecast/locations.json (1050800 = Proença-a-Nova, 1110600 = Lisboa)
 ipma_location = 1050800
 hours = 24

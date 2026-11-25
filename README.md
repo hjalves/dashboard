@@ -8,7 +8,7 @@ fetches and caches every source; the page is plain HTML/CSS/JS shown fullscreen 
 |---|---|---|
 | clock | browser | every second |
 | weather now | WS2900 station via the router's weatherd (`/ubus`, anonymous read) | 1 min |
-| forecast | IPMA hourly forecast (`aggregate/<id>.json`) for the next hours, plus the daily forecast for the next two days, with IPMA's own weather-type text | 30 min |
+| forecast | MET Norway Locationforecast 2.0 (`complete`, by coordinates): hourly temperature, rain in mm and symbol; the two day columns are summed from it (min/max, total mm, the 06–18 h symbol). Symbol names from MET's `legend.csv`. Or IPMA (`source = "ipma"`), where `-99` means "same as the previous hour" | 30 min |
 | news | Kagi News (`news.kagi.com/<category>.json`), categories rotate every 14 s | 30 min |
 | github | GraphQL: your repos by last push, with their latest commits | 5 min |
 | tv | M3UPT playlist (channel looked up by name) + its XMLTV EPG; plays with hls.js | 6 h |
@@ -31,9 +31,13 @@ needs the `X-Dashboard: 1` header, so other web pages can't change it. The curso
 12-column grid, three rows; 1 rem = 1/108 of the screen height, so it scales to any 16:9 monitor.
 Fonts: Selawik (Microsoft's open Segoe UI substitute, OFL, vendored in `static/fonts`).
 Weather icons: Meteocons' monochrome set (MIT, Bas Milius, vendored in `static/icons`, only the
-33 used), tinted with the text colour via CSS masks. IPMA's own icons are colourful and skeuomorphic,
-so `static/icons.js` maps IPMA's weather-type numbers to Meteocons names by hand, with day/night
-variants from the forecast hour's sun position. Types not in the table show text only.
+40 used), tinted with the text colour via CSS masks. `static/icons.js` maps MET Norway symbol codes
+(day/night comes with the symbol) and IPMA weather-type numbers to Meteocons names by hand.
+Symbols not in a table show text only.
+
+MET Norway's data is CC BY 4.0, so the tile shows "data: MET Norway". Their terms ask for an
+identifying User-Agent and no more than one request per Expires period (~30 min); the server sends
+a generic `home-dashboard/0.1` and refreshes every 30 min.
 
 ## Develop
 

@@ -72,7 +72,13 @@ def build_app(cfg: dict) -> Starlette:
     w, n, g, t = cfg["weather"], cfg["news"], cfg["github"], cfg["tv"]
 
     station = Cached("station", 60, lambda: sources.fetch_station(w["station_ubus"])) if w["station_ubus"] else None
-    forecast = Cached("forecast", 1800, lambda: sources.fetch_forecast(int(w["ipma_location"]), int(w["hours"])))
+    if w["source"] == "ipma":
+        fetch = lambda: sources.fetch_ipma(int(w["ipma_location"]), int(w["hours"]))  # noqa: E731
+    else:
+        # MET Norway asks clients not to poll more often than the data's Expires (about 30 min).
+        fetch = lambda: sources.fetch_metno(float(w["latitude"]), float(w["longitude"]),  # noqa: E731
+                                            w["place"], int(w["hours"]))
+    forecast = Cached("forecast", 1800, fetch)
     # News categories: config.toml, unless changed from the page (right-click the tile) → state.json.
     state = config.load_state()
 

@@ -1,6 +1,7 @@
 """Data sources. Each fetch_* coroutine returns plain JSON-able data or raises."""
 
 import asyncio
+import csv
 import gzip
 import io
 import math
@@ -16,7 +17,7 @@ from zoneinfo import ZoneInfo
 import httpx
 
 TZ = ZoneInfo("Europe/Lisbon")
-UA = "dashboard/0.1 (+home dashboard)"
+UA = "home-dashboard/0.1"
 # Browser-like UA for the IPTV playlist/EPG hosts, which reject unknown clients.
 BROWSER_UA = "Mozilla/5.0 (X11; Linux x86_64; rv:160.0) Gecko/20100101 Firefox/160.0"
 
@@ -138,7 +139,19 @@ async def fetch_station(url: str) -> dict:
     }
 
 
-async def fetch_forecast(location: int, hours: int) -> dict:
+def _carry_forward(rows: list[dict], fields: tuple[str, ...]) -> None:
+    """IPMA's hourly rows hold some values only every 3 hours; -99 means "same as before"."""
+    last: dict = {}
+    for x in rows:
+        for f in fields:
+            v = _num(x.get(f))
+            if v is None and f in last:
+                x[f] = last[f]
+            elif v is not None:
+                last[f] = v
+
+
+async def fetch_ipma(location: int, hours: int) -> dict:
     async with client() as c:
         await ipma_static.ensure(c)
         r = await c.get(IPMA_FORECAST.format(id=location))
@@ -149,7 +162,9 @@ async def fetch_forecast(location: int, hours: int) -> dict:
     now = datetime.now(TZ).replace(minute=0, second=0, microsecond=0)
 
     hourly = []
-    for x in sorted((x for x in rows if x.get("idPeriodo") == 1), key=lambda x: x["dataPrev"]):
+    hrows = sorted((x for x in rows if x.get("idPeriodo") == 1), key=lambda x: x["dataPrev"])
+    _carry_forward(hrows, ("tMed", "probabilidadePrecipita", "ffVento", "hR"))
+    for x in hrows:
         t = datetime.fromisoformat(x["dataPrev"]).replace(tzinfo=TZ)
         if t < now:
             continue
@@ -183,10 +198,128 @@ async def fetch_forecast(location: int, hours: int) -> dict:
     today = datetime.now(TZ).date()
     rise, sset = sun_times(lat, lon, datetime(today.year, today.month, today.day))
     return {
+        "source": "ipma",
+        "credit": "IPMA",
         "location": loc.get("local"),
         "updated": rows[0].get("dataUpdate") if rows else None,
         "hourly": hourly,
         "daily": daily[:5],
+        "sunrise": rise.astimezone(TZ).isoformat(),
+        "sunset": sset.astimezone(TZ).isoformat(),
+    }
+
+
+# ---------------------------------------------------------------- met.no
+
+METNO = "https://api.met.no/weatherapi/locationforecast/2.0/complete?lat={lat:.4f}&lon={lon:.4f}"
+# MET Norway's own English names for its symbol codes (MIT, github.com/metno/weathericons).
+METNO_LEGEND = "https://raw.githubusercontent.com/metno/weathericons/main/weather/legend.csv"
+_metno_legend: dict = {"at": 0.0, "names": {}}
+
+
+async def _metno_names(c: httpx.AsyncClient) -> dict[str, str]:
+    if time.time() - _metno_legend["at"] > 86400 or not _metno_legend["names"]:
+        try:
+            r = await c.get(METNO_LEGEND)
+            r.raise_for_status()
+            names = {row["Symbol ID"].strip(): row["English"].strip()
+                     for row in csv.DictReader(io.StringIO(r.text))}
+            _metno_legend.update(names=names, at=time.time())
+        except Exception:  # noqa: BLE001 - text is optional; keep the old names or none
+            _metno_legend["at"] = time.time() - 86400 + 600  # retry in 10 min
+    return _metno_legend["names"]
+
+
+def _symbol(block: dict | None) -> tuple[str | None, bool | None]:
+    """'partlycloudy_night' → ('partlycloudy', False); variants: _day, _night, _polartwilight."""
+    code = ((block or {}).get("summary") or {}).get("symbol_code")
+    if not code:
+        return None, None
+    base, _, variant = code.partition("_")
+    return base, variant != "night"
+
+
+async def fetch_metno(lat: float, lon: float, place: str, hours: int) -> dict:
+    """MET Norway Locationforecast: hourly for ~2.5 days, then 6-hourly. Rain as amounts (mm)."""
+    async with client() as c:
+        r = await c.get(METNO.format(lat=lat, lon=lon))
+        r.raise_for_status()
+        props = r.json()["properties"]
+        names = await _metno_names(c)
+    series = props["timeseries"]
+    now = datetime.now(TZ).replace(minute=0, second=0, microsecond=0)
+
+    # One row per hour: hourly steps directly, 6-hourly steps spread over their 6 hours
+    # (temperature from the 6-hour min/max, rain split evenly), so days can be summed.
+    timeline = []
+    for i, x in enumerate(series):
+        t = datetime.fromisoformat(x["time"].replace("Z", "+00:00")).astimezone(TZ)
+        d = x["data"]
+        inst = d["instant"]["details"]
+        n1, n6 = d.get("next_1_hours"), d.get("next_6_hours")
+        if n1:
+            sym, day = _symbol(n1)
+            timeline.append({"t": t, "temp": inst.get("air_temperature"), "tmin": inst.get("air_temperature"),
+                             "tmax": inst.get("air_temperature"),
+                             "rain": (n1.get("details") or {}).get("precipitation_amount"),
+                             "inst": inst, "symbol": sym, "day": day, "hourly": True, "d": d})
+        elif n6:
+            det = n6.get("details") or {}
+            mm = det.get("precipitation_amount")
+            for h in range(6):
+                timeline.append({"t": t + timedelta(hours=h), "temp": None,
+                                 "tmin": det.get("air_temperature_min"), "tmax": det.get("air_temperature_max"),
+                                 "rain": None if mm is None else mm / 6, "hourly": False, "d": d})
+
+    hourly = []
+    for row in timeline:
+        if row["t"] < now or not row["hourly"]:
+            continue
+        inst = row["inst"]
+        hourly.append({
+            "time": row["t"].isoformat(),
+            "temp": row["temp"],
+            "rain_mm": row["rain"],
+            "wind_kmh": None if inst.get("wind_speed") is None else round(inst["wind_speed"] * 3.6, 1),
+            "wind_dir": inst.get("wind_from_direction"),
+            "hum": inst.get("relative_humidity"),
+            "cloud": inst.get("cloud_area_fraction"),
+            "symbol": row["symbol"],
+            "desc": names.get(row["symbol"]),
+            "day": row["day"],
+        })
+        if len(hourly) >= hours:
+            break
+
+    daily = []
+    today = datetime.now(TZ).date()
+    for k in range(0, 4):
+        date = today + timedelta(days=k)
+        rows = [r for r in timeline if r["t"].date() == date]
+        if len(rows) < 24:
+            continue  # only whole days (today's past hours are gone, the last day is cut off)
+        lows = [r["tmin"] for r in rows if r["tmin"] is not None]
+        highs = [r["tmax"] for r in rows if r["tmax"] is not None]
+        rain = [r["rain"] for r in rows if r["rain"] is not None]
+        # The day's symbol: MET's 12-hour summary starting 06:00 (the daytime half).
+        sym = None
+        for r in rows:
+            if r["t"].hour == 6:
+                sym, _ = _symbol(r["d"].get("next_12_hours") or r["d"].get("next_6_hours"))
+                break
+        daily.append({"date": date.isoformat(), "min": min(lows) if lows else None,
+                      "max": max(highs) if highs else None,
+                      "rain_mm": round(sum(rain), 1) if rain else None,
+                      "symbol": sym, "desc": names.get(sym), "day": True})
+
+    rise, sset = sun_times(lat, lon, datetime(today.year, today.month, today.day))
+    return {
+        "source": "metno",
+        "credit": "MET Norway",
+        "location": place,
+        "updated": props["meta"].get("updated_at"),
+        "hourly": hourly,
+        "daily": daily,
         "sunrise": rise.astimezone(TZ).isoformat(),
         "sunset": sset.astimezone(TZ).isoformat(),
     }

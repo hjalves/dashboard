@@ -36,9 +36,56 @@ const WEATHER_ICONS = {
   30: "sleet",                        // Rain and snow
 };
 
-/* HTML for an icon tinted with the current text colour, or "" when there's none for this type. */
+/* MET Norway symbol code (without _day/_night; names from github.com/metno/weathericons
+   legend.csv, typos included as the API sends them) → Meteocons monochrome icon. */
+const METNO_ICONS = {
+  clearsky: "clear-{dn}",
+  fair: "partly-cloudy-{dn}",
+  partlycloudy: "overcast-{dn}",
+  cloudy: "cloudy",
+  fog: "fog",
+  lightrainshowers: "partly-cloudy-{dn}-drizzle",
+  rainshowers: "partly-cloudy-{dn}-rain",
+  heavyrainshowers: "overcast-{dn}-rain",
+  lightrainshowersandthunder: "thunderstorms-{dn}-rain",
+  rainshowersandthunder: "thunderstorms-{dn}-rain",
+  heavyrainshowersandthunder: "thunderstorms-{dn}-rain",
+  lightsleetshowers: "partly-cloudy-{dn}-sleet",
+  sleetshowers: "partly-cloudy-{dn}-sleet",
+  heavysleetshowers: "partly-cloudy-{dn}-sleet",
+  lightssleetshowersandthunder: "thunderstorms-{dn}-sleet",
+  sleetshowersandthunder: "thunderstorms-{dn}-sleet",
+  heavysleetshowersandthunder: "thunderstorms-{dn}-sleet",
+  lightsnowshowers: "partly-cloudy-{dn}-snow",
+  snowshowers: "partly-cloudy-{dn}-snow",
+  heavysnowshowers: "partly-cloudy-{dn}-snow",
+  lightssnowshowersandthunder: "thunderstorms-{dn}-snow",
+  snowshowersandthunder: "thunderstorms-{dn}-snow",
+  heavysnowshowersandthunder: "thunderstorms-{dn}-snow",
+  lightrain: "drizzle",
+  rain: "rain",
+  heavyrain: "rain",
+  lightrainandthunder: "thunderstorms-rain",
+  rainandthunder: "thunderstorms-rain",
+  heavyrainandthunder: "thunderstorms-rain",
+  lightsleet: "sleet",
+  sleet: "sleet",
+  heavysleet: "sleet",
+  lightsleetandthunder: "thunderstorms-sleet",
+  sleetandthunder: "thunderstorms-sleet",
+  heavysleetandthunder: "thunderstorms-sleet",
+  lightsnow: "snow",
+  snow: "snow",
+  heavysnow: "snow",
+  lightsnowandthunder: "thunderstorms-snow",
+  snowandthunder: "thunderstorms-snow",
+  heavysnowandthunder: "thunderstorms-snow",
+};
+
+/* HTML for an icon tinted with the current text colour, or "" when there's none.
+   `type` is a MET Norway symbol (string) or an IPMA weather type (number). */
 function weatherIcon(type, day, cls) {
-  const name = WEATHER_ICONS[type];
+  const name = typeof type === "string" ? METNO_ICONS[type] : WEATHER_ICONS[type];
   if (!name) return "";
   const file = name.replace("{dn}", day === false ? "night" : "day");
   return `<i class="wi ${cls || ""}" style="--icon:url(/static/icons/${file}.svg)"></i>`;

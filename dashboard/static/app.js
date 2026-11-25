@@ -317,6 +317,21 @@ $("tv").addEventListener("click", () => {
 $("news").addEventListener("click", nextStory);
 document.body.classList.add("idle");
 
+/* ---------------------------------------------------------------- health */
+
+const started = Date.now();
+function reportStats() {
+  const v = $("tv-video"), q = v.getVideoPlaybackQuality ? v.getVideoPlaybackQuality() : {};
+  const level = tv.hls && tv.hls.levels[tv.hls.currentLevel];
+  const body = {
+    ua: navigator.userAgent, uptime: Math.round((Date.now() - started) / 1000),
+    video: { width: v.videoWidth, height: v.videoHeight, time: v.currentTime, paused: v.paused,
+      total_frames: q.totalVideoFrames, dropped_frames: q.droppedVideoFrames,
+      bitrate: level ? level.bitrate : null, codecs: level ? level.videoCodec : null },
+  };
+  fetch("/api/stats", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).catch(() => {});
+}
+
 /* ---------------------------------------------------------------- self-update */
 
 let version = null;
@@ -337,6 +352,7 @@ poll(loadTv, 15 * MIN);
 poll(checkVersion, MIN);
 setInterval(flipRepos, 9000);
 setInterval(renderEpg, 30000);
+setInterval(reportStats, MIN);
 setInterval(() => tv.watchdog(), 5000);
 setInterval(() => showOverlay(10000), 10 * MIN);
 window.addEventListener("resize", drawChart);

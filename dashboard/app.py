@@ -100,6 +100,18 @@ def build_app(cfg: dict) -> Starlette:
     async def version(_):
         return JSONResponse({"version": build})
 
+    # Playback stats the page reports every minute (browser, decoder, dropped frames).
+    client_stats: dict = {}
+
+    async def stats(req):
+        if req.method == "POST":
+            body = await req.json()
+            body["received"] = time.time()
+            client_stats.clear()
+            client_stats.update(body)
+            return Response(status_code=204)
+        return JSONResponse(client_stats)
+
     async def index(_):
         return FileResponse(STATIC / "index.html", headers={"Cache-Control": "no-cache"})
 
@@ -123,6 +135,7 @@ def build_app(cfg: dict) -> Starlette:
             Route("/api/github", github_ep),
             Route("/api/tv", tv_ep),
             Route("/api/version", version),
+            Route("/api/stats", stats, methods=["GET", "POST"]),
             Mount("/static", StaticFiles(directory=STATIC), name="static"),
         ],
         lifespan=lifespan,

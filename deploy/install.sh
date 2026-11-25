@@ -17,7 +17,9 @@ git archive --format=tar HEAD | ssh "$HOST" '
   UV_PYTHON_PREFERENCE=only-managed uv sync --frozen --no-dev -q
   install -Dm644 deploy/dashboard.service ~/.config/systemd/user/dashboard.service
   install -Dm755 deploy/dashboard-kiosk ~/.local/bin/dashboard-kiosk
-  install -Dm644 deploy/dashboard-kiosk.desktop ~/.config/autostart/dashboard-kiosk.desktop
+  mkdir -p ~/.config/autostart
+  # Absolute path: the XFCE session PATH has no ~/.local/bin
+  sed "s|@HOME@|$HOME|" deploy/dashboard-kiosk.desktop > ~/.config/autostart/dashboard-kiosk.desktop
   mkdir -p ~/.config/dashboard
   [ -f ~/.config/dashboard/config.toml ] || cp config.example.toml ~/.config/dashboard/config.toml
   systemctl --user daemon-reload

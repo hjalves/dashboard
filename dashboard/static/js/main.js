@@ -37,7 +37,7 @@ function reportStats() {
   const level = tv.hls && tv.hls.levels[tv.hls.currentLevel];
   const body = {
     ua: navigator.userAgent, uptime: Math.round((Date.now() - started) / 1000), scene: activeScene(),
-    video: { width: v.videoWidth, height: v.videoHeight, time: v.currentTime, paused: v.paused, suspended: tv.suspended,
+    video: { width: v.videoWidth, height: v.videoHeight, time: v.currentTime, paused: v.paused, muted: v.muted, suspended: tv.suspended,
       total_frames: q.totalVideoFrames, dropped_frames: q.droppedVideoFrames,
       bitrate: level ? level.bitrate : null, codecs: level ? level.videoCodec : null },
   };

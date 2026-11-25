@@ -352,7 +352,7 @@ poll(loadTv, 15 * MIN);
 poll(checkVersion, MIN);
 setInterval(flipRepos, 9000);
 setInterval(renderEpg, 30000);
-setInterval(reportStats, MIN);
+setInterval(reportStats, 30000);
 setInterval(() => tv.watchdog(), 5000);
 setInterval(() => showOverlay(10000), 10 * MIN);
 window.addEventListener("resize", drawChart);

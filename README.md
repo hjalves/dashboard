@@ -34,7 +34,7 @@ playing.
 | | latency and traffic, last 24 h (15-min buckets) | same | 1 min |
 | | online devices, newly seen first (pages every 12 s if they don't fit) | `lanwatch` on the router (`lanwatch.devices`) | 30 s |
 
-| night | big clock, date, temperature now with icon and description, the next 8 hours, tomorrow | the same weather data as home | 5 min |
+| night | big clock, date, temperature now with icon and description, the moon (phase, % lit, next rise/set), the next 8 hours, tomorrow | the same weather data as home | 5 min |
 
 No speed tests: throughput is what's being used, from the Huawei's byte counters.
 

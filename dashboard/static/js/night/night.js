@@ -4,6 +4,7 @@
 import { $, esc, getJSON, postJSON, deg, fmtMM, poll, MIN } from "../core.js";
 import { showBack, hideBack, onRightClick } from "../backs.js";
 import { weatherIcon } from "../icons.js";
+import { moonInfo } from "../moon.js";
 
 let settings = { auto: false, start: 23, end: 7 };
 let draft = null;
@@ -30,6 +31,8 @@ async function loadWeather() {
     ? `${first ? weatherIcon(first.symbol ?? first.type, first.day) : ""}<span class="nt-temp">${deg(temp)}</span>
        <span class="nt-desc">${esc(first ? first.desc || "" : "")}${lohi}</span>`
     : "";
+  const mi = moonInfo(w.moon);
+  $("nt-moon").innerHTML = mi ? `<i class="wi" style="--icon:url(${mi.icon})"></i><span>${esc(mi.name)} · ${mi.lit}% lit${mi.when ? " · " + mi.when : ""}</span>` : "";
   const hrs = f ? f.hourly.slice(1, 9) : [];
   $("nt-hours").innerHTML = hrs.map((h) => {
     const rain = h.rain_mm != null ? (h.rain_mm >= 0.2 ? fmtMM(h.rain_mm) + " mm" : "")

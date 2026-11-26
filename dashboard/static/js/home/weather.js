@@ -3,6 +3,7 @@
 import { $, esc, getJSON, postJSON, ago, hhmm, deg, fmtMM, poll, MIN } from "../core.js";
 import { showBack, hideBack, onRightClick } from "../backs.js";
 import { weatherIcon } from "../icons.js";
+import { moonInfo } from "../moon.js";
 
 let forecast = null;
 let useStation = true;  // preference: the router's weather station for "now", or the forecast
@@ -116,18 +117,12 @@ function renderDays(f) {
   }).join("");
 }
 
-/* The moon at night (MET Norway): phase icon, how much is lit, and when it sets if it's up, or
-   when it rises if not. Phase angle: 0 new, 90 first quarter, 180 full, 270 last quarter. */
-const MOON_PHASES = ["new", "waxing-crescent", "first-quarter", "waxing-gibbous", "full", "waning-gibbous", "last-quarter", "waning-crescent"];
+/* The moon at night: phase icon, % lit, and when it sets if it's up, or rises if not. */
 function moonFact(m) {
-  if (m.phase == null) return "";
-  const phase = MOON_PHASES[Math.round(m.phase / 45) % 8];
-  const now = Date.now(), next = (m.events || []).find((e) => new Date(e.time).getTime() > now);
-  const when = next ? `${next.kind === "set" ? "sets" : "rises"} ${hhmm(next.time)}` : "";
-  const tip = `${phase.replace("-", " ")} · ${m.lit}% lit` + (m.events || []).filter((e) => new Date(e.time).getTime() > now - 12 * 3600e3)
-    .slice(0, 3).map((e) => ` · ${e.kind === "set" ? "sets" : "rises"} ${hhmm(e.time)}`).join("");
-  return `<span class="moon" title="${esc(tip)}"><i class="wi" style="--icon:url(/static/icons/moon-${phase}.svg)"></i>` +
-    `<b>${m.lit}%</b>${when ? " · " + when : ""}</span>`;
+  const mi = moonInfo(m);
+  if (!mi) return "";
+  return `<span class="moon" title="${esc(mi.tip)}"><i class="wi" style="--icon:url(${mi.icon})"></i>` +
+    `<b>${mi.lit}%</b>${mi.when ? " · " + mi.when : ""}</span>`;
 }
 
 function isDaytime(f) {

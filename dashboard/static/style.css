@@ -401,6 +401,8 @@ body[data-scene="night"] .scene-nav span.on { color: #6a6a6a; }
 .nt-now .wi { width: 9rem; height: 9rem; }
 .nt-temp { font-size: 8rem; font-weight: 300; color: #9a9a9a; line-height: 1; }
 .nt-desc { font-size: 2.6rem; font-weight: 300; color: #6c6c6c; margin-left: 1rem; }
+.nt-moon { display: flex; align-items: center; gap: 1rem; margin-top: 2.4rem; font-size: 2.2rem; font-weight: 300; color: #5f5f5f; }
+.nt-moon .wi { width: 3.6rem; height: 3.6rem; color: #6c6c6c; }
 .nt-hours { display: flex; gap: 3.6rem; margin-top: 4.4rem; }
 .nh { display: flex; flex-direction: column; align-items: center; width: 6rem; }
 .nh-h { font-size: 1.8rem; color: #5a5a5a; }

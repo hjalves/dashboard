@@ -1,8 +1,11 @@
 /* Agenda tile: upcoming events from the configured iCal calendars (e.g. Google Calendar), grouped
    by day, as many as fit. All-day events first in each day; an event in progress is bold. */
-import { $, esc, getJSON, poll, MIN } from "../core.js";
+import { $, esc, getJSON, postJSON, poll, MIN } from "../core.js";
+import { showBack, hideBack, onRightClick } from "../backs.js";
 
 let data = null;
+let calendars = [];  // [{name, color, hidden}]
+let draft = [];      // names hidden, while the tile is turned over
 
 const dayKey = (d) => d.toLocaleDateString("sv-SE");
 function dayName(key) {
@@ -35,14 +38,50 @@ function render() {
 }
 
 async function loadAgenda() {
-  const r = await getJSON("/api/calendar");
+  applyAgenda(await getJSON("/api/calendar"));
+}
+
+function applyAgenda(r) {
   if (r.data) data = r.data;
+  calendars = r.calendars || [];
   const errs = (r.data && r.data.errors) || [];
   $("ag-note").textContent = !r.ok ? "· offline" : errs.length ? "· " + errs.map((e) => e.split(":")[0]).join(", ") + " unavailable" : "";
   render();
 }
 
+/* Back of the tile: click a calendar to show or hide it; save applies, cancel discards. */
+function renderBack() {
+  $("ag-cals").innerHTML = calendars.map((c) => `<span class="ag-cal${draft.includes(c.name) ? "" : " on"}"
+    data-name="${esc(c.name)}" style="--c:${esc(c.color || "#888")}">${esc(c.name)}</span>`).join("");
+  $("ag-save").disabled = false;
+}
+
 export function initAgenda(scene) {
+  onRightClick($("agenda"), () => {
+    draft = calendars.filter((c) => c.hidden).map((c) => c.name);
+    $("ag-msg").textContent = draft.length ? `${draft.length} hidden` : "";
+    renderBack();
+    showBack($("agenda"));
+  });
+  $("ag-cals").addEventListener("click", (e) => {
+    const c = e.target.closest("[data-name]");
+    if (!c) return;
+    const n = c.dataset.name;
+    draft = draft.includes(n) ? draft.filter((x) => x !== n) : [...draft, n];
+    $("ag-msg").textContent = draft.length ? `${draft.length} hidden` : "";
+    renderBack();
+  });
+  $("ag-cancel").addEventListener("click", hideBack);
+  $("ag-save").addEventListener("click", async () => {
+    $("ag-save").disabled = true;
+    try {
+      applyAgenda(await postJSON("/api/calendar/visible", { hidden: draft }));
+      hideBack();
+    } catch (err) {
+      $("ag-msg").textContent = "not saved: " + err.message;
+      $("ag-save").disabled = false;
+    }
+  });
   poll(loadAgenda, 5 * MIN, scene);
   setInterval(render, MIN);  // "now" highlighting and finished events, between fetches
 }

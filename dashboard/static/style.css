@@ -222,6 +222,17 @@ body.idle .tv-mute:not(.on) { opacity: 0; }
 .ag-ev.now .ag-title { font-weight: 600; }
 .ag-ev.now .ag-time { color: var(--ink); }
 .ag-empty { font-size: 1.8rem; color: var(--ink-3); }
+.ag-back { background: #18181a !important; gap: 1rem; padding: 1.8rem 2.4rem 1.4rem; }
+.ag-back .back-title { font-size: 2.6rem; }
+.ag-cals { flex: 1; min-height: 0; display: flex; flex-wrap: wrap; align-content: flex-start; gap: .6rem; }
+.ag-cal { display: flex; align-items: center; gap: 1rem; padding: 0 1.8rem; line-height: 4.2rem; font-size: 1.8rem;
+  background: rgba(255, 255, 255, .06); color: var(--ink-3); cursor: pointer; transition: background .15s; }
+.ag-cal::before { content: ""; width: 1.2rem; height: 1.2rem; background: var(--c); opacity: .35; }
+.ag-cal.on { background: rgba(255, 255, 255, .14); color: var(--ink); }
+.ag-cal.on::before { opacity: 1; }
+.ag-cal:hover { background: rgba(255, 255, 255, .2); }
+.ag-back .btn { padding: .4rem 2rem; min-width: 10rem; }
+.ag-back .btn.primary { background: #555; border-color: #555; }
 .gh .top { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; }
 .gh .name { font-size: 2.6rem; font-weight: 400; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .gh .when { font-size: 1.6rem; color: var(--ink-3); white-space: nowrap; }

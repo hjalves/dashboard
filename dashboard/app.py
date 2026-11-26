@@ -134,8 +134,31 @@ def build_app(cfg: dict) -> Starlette:
         parts = await asyncio.gather(forecast.get(), station.get() if use_station else asyncio.sleep(0, None))
         return JSONResponse({"forecast": parts[0], "station": parts[1], "station_enabled": use_station})
 
+    # Calendars hidden from the agenda (right-click the tile); still fetched, so un-hiding is instant.
+    def calendar_hidden() -> list[str]:
+        return list(state.get("calendar_hidden") or [])
+
     async def calendar_ep(_):
-        return JSONResponse(await calendar.get())
+        r = await calendar.get()
+        hidden = set(calendar_hidden())
+        cals = [{"name": c["name"], "color": c.get("color"), "hidden": c["name"] in hidden} for c in cal_cfg["calendars"]]
+        data = r["data"]
+        if data:
+            data = {**data, "events": [e for e in data["events"] if e["calendar"] not in hidden],
+                    "errors": [e for e in data["errors"] if e.split(":")[0] not in hidden]}
+        return JSONResponse({**r, "data": data, "calendars": cals})
+
+    async def calendar_visible_ep(req):
+        if not csrf_ok(req):
+            return JSONResponse({"error": "missing X-Dashboard header"}, status_code=403)
+        hidden = (await req.json()).get("hidden")
+        names = {c["name"] for c in cal_cfg["calendars"]}
+        if not isinstance(hidden, list) or not all(isinstance(h, str) and h in names for h in hidden):
+            return JSONResponse({"error": "hidden must list configured calendar names"}, status_code=400)
+        state["calendar_hidden"] = hidden
+        config.save_state(state)
+        log.info("calendars hidden: %s", hidden)
+        return await calendar_ep(req)
 
     async def lan_ep(_):
         return JSONResponse(await lan.get())
@@ -434,6 +457,7 @@ def build_app(cfg: dict) -> Starlette:
             Route("/api/control", control_ep, methods=["POST"]),
             Route("/api/qr", qr_ep),
             Route("/api/calendar", calendar_ep),
+            Route("/api/calendar/visible", calendar_visible_ep, methods=["POST"]),
             Route("/api/lan", lan_ep),
             Route("/api/internet", internet_ep),
             Route("/api/news", news_ep),

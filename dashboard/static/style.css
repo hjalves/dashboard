@@ -169,8 +169,10 @@ body.idle .tv-mute:not(.on) { opacity: 0; }
 .story p { margin: 1.4rem 0 0; font-size: 1.9rem; line-height: 1.4; color: var(--ink-2);
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 /* Discreet QR code for the story's link (option): top-right, away from the text at the bottom. */
-/* Shown at its natural size (whole pixels per module, set by the server). */
-.news-qr { position: absolute; top: 2rem; right: 2rem;
+/* Shown at its natural size (whole pixels per module, set by the server). Frosted glass: the
+   photo shows through, blurred, behind slightly translucent dots. */
+.news-qr { position: absolute; top: 2rem; right: 2rem; opacity: .88;
+  background: rgba(243, 240, 247, .68); backdrop-filter: blur(10px) saturate(1.2);
   box-shadow: 0 .4rem 1.6rem rgba(0, 0, 0, .35); transition: opacity .6s; }
 .news-qr[hidden] { display: none; }
 .nb-label.qr-label { width: auto; margin-right: 1rem; }

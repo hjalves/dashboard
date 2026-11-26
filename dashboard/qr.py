@@ -8,7 +8,8 @@ DARK = "#22163a"   # deep purple, as the news tile
 LIGHT = "#f3f0f7"  # soft off-white
 
 
-def qr_svg(text: str, dark: str = DARK, light: str = LIGHT, border: int = 2, px: int = 4) -> bytes:
+def qr_svg(text: str, dark: str = DARK, light: str | None = None, border: int = 2, px: int = 4) -> bytes:
+    """With light=None the background is left transparent, for the page to style (frosted glass)."""
     """`px` screen pixels per module (shown at natural size): the dots are px-1 pixels with a
     1-pixel gap, so every gap lands on whole pixels and the pattern stays even."""
     q = segno.make(text, error="l", micro=False)
@@ -37,6 +38,6 @@ def qr_svg(text: str, dark: str = DARK, light: str = LIGHT, border: int = 2, px:
 
     svg = (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {size} {size}" width="{size * px}" '
            f'height="{size * px}" shape-rendering="crispEdges">'
-           f'<rect width="{size}" height="{size}" fill="{light}"/>'
+           + (f'<rect width="{size}" height="{size}" fill="{light}"/>' if light else "") +
            f'<g fill="{dark}"><path d="{"".join(dots)}"/>{"".join(eyes)}</g></svg>')
     return svg.encode()

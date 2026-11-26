@@ -3,7 +3,7 @@ import { $, esc, getJSON, postJSON, poll, swapIn, MIN } from "../core.js";
 import { showBack, hideBack, isBack, onRightClick } from "../backs.js";
 
 const news = { stories: [], i: -1, timer: 0, seq: 0, qr: false };
-const picker = { available: [], selected: [], filters: [], suggest: [], tab: "cats", hidden: 0 };
+const picker = { available: [], selected: [], filters: [], suggest: [], tab: "cats", hidden: 0, qr: false };
 
 async function loadNews() {
   applyNews(await getJSON("/api/news"));
@@ -52,6 +52,7 @@ async function openPicker() {
   $("picker-grid").innerHTML = "";
   showBack($("news"), () => { clearTimeout(news.timer); news.timer = setTimeout(nextStory, 8000); });
   picker.suggest = suggestions(news.stories[news.i]);
+  picker.qr = news.qr;  // drafts: nothing changes until save
   try {
     const [r, f] = await Promise.all([getJSON("/api/news/categories"), getJSON("/api/news/filters")]);
     picker.available = r.available;
@@ -95,8 +96,9 @@ function showQr(s) {
 
 function renderDisplay() {
   $("d-qr").innerHTML = [["off", false], ["on", true]]
-    .map(([t, v]) => `<span class="chip${news.qr === v ? " on" : ""}" data-qr="${v}">${t}</span>`).join("");
+    .map(([t, v]) => `<span class="chip${picker.qr === v ? " on" : ""}" data-qr="${v}">${t}</span>`).join("");
   $("picker-sub").textContent = "how the tile looks";
+  $("picker-save").disabled = !picker.selected.length;
 }
 
 function setTab(tab) {
@@ -149,18 +151,11 @@ export function initNews(scene) {
     if (k >= 0) picker.selected.splice(k, 1); else picker.selected.push(c);
     renderPicker();
   });
-  $("d-qr").addEventListener("click", async (e) => {
+  $("d-qr").addEventListener("click", (e) => {
     const c = e.target.closest("[data-qr]");
     if (!c) return;
-    const on = c.dataset.qr === "true";
-    try {
-      await postJSON("/api/prefs", { news_qr: on });
-      news.qr = on;
-      renderDisplay();
-      showQr(news.stories[news.i]);
-    } catch (err) {
-      $("picker-msg").textContent = "not changed: " + err.message;
-    }
+    picker.qr = c.dataset.qr === "true";
+    renderDisplay();
   });
   getJSON("/api/prefs").then((p) => { news.qr = !!p.news_qr; showQr(news.stories[news.i]); }).catch(() => {});
   $("news-pivot").addEventListener("click", (e) => { const t = e.target.closest("[data-tab]"); if (t) setTab(t.dataset.tab); });
@@ -179,8 +174,11 @@ export function initNews(scene) {
     $("picker-msg").textContent = "saving…";
     try {
       await postJSON("/api/news/categories", { selected: picker.selected });
+      await postJSON("/api/prefs", { news_qr: picker.qr });
+      news.qr = picker.qr;
       const j = await postJSON("/api/news/filters", { keywords: picker.filters });
       hideBack();
+      $("picker-save").disabled = false;
       news.stories = [];
       news.i = -1;
       applyNews(j);

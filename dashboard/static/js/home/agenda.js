@@ -27,8 +27,30 @@ function render() {
     if (!days.has(key)) days.set(key, []);
     days.get(key).push(e);
   }
-  const html = [...days].map(([key, evs]) => `<div class="ag-day"><div class="ag-dayname">${esc(dayName(key))}</div>${
+  // Tasks: overdue and due today go first on today; future ones on their day; undated in a "to do"
+  // group right after today.
+  const undated = [];
+  for (const t of data.tasks || []) {
+    const due = t.due && (t.due < todayKey ? todayKey : t.due);
+    const item = { ...t, task: true, overdue: !!t.due && t.due < todayKey, all_day: true, start: due };
+    if (!due) { undated.push(item); continue; }
+    if (!days.has(due)) days.set(due, []);
+    days.get(due).unshift(item);
+  }
+  // Within a day: overdue tasks, tasks due that day, all-day events, then timed events by start.
+  const rank = (e) => (e.overdue ? 0 : e.task ? 1 : e.all_day ? 2 : 3);
+  for (const evs of days.values()) evs.sort((a, b) => rank(a) - rank(b) || (rank(a) === 3 ? (a.start < b.start ? -1 : 1) : 0));
+  const groups = [...days].sort((a, b) => (a[0] < b[0] ? -1 : 1));
+  if (undated.length) {
+    const at = groups.length && groups[0][0] === todayKey ? 1 : 0;
+    groups.splice(at, 0, ["to do", undated]);
+  }
+  const html = groups.map(([key, evs]) => `<div class="ag-day"><div class="ag-dayname">${esc(key === "to do" ? key : dayName(key))}</div>${
     evs.map((e) => {
+      if (e.task) {
+        return `<div class="ag-ev task${e.overdue ? " overdue" : ""}" style="--c:${esc(e.color || "#888")}" title="${esc(e.list + (e.notes ? " · " + e.notes : ""))}">
+          <span class="ag-time">${e.overdue ? "overdue" : "task"}</span><span class="ag-title">${esc(e.title)}</span></div>`;
+      }
       const running = !e.all_day && new Date(e.start).getTime() <= now && now < new Date(e.end).getTime();
       const time = e.all_day ? "all day" : new Date(e.start).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
       return `<div class="ag-ev${running ? " now" : ""}" style="--c:${esc(e.color || "#888")}" title="${esc(e.calendar + (e.location ? " · " + e.location : ""))}">

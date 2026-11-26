@@ -32,6 +32,10 @@ DEFAULTS = {
         # keep it only in config.toml), color
         "calendars": [],
     },
+    "tasks": {
+        # Google Tasks via the Apps Script web app in docs/google-tasks.md; url/token are secrets.
+        "url": "", "token": "", "name": "Tasks", "color": "#ffb900",
+    },
     "news": {
         # Kagi News category names, as listed in https://news.kagi.com/kite.json
         "categories": ["Portugal", "World", "Europe", "Business", "Technology", "Linux & OSS"],

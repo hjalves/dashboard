@@ -509,6 +509,21 @@ async def fetch_calendar(calendars: list[dict], days: int) -> dict:
     return {"events": events, "errors": errors, "from": start.date().isoformat(), "days": days}
 
 
+async def fetch_tasks(url: str, token: str) -> list[dict]:
+    """Open Google Tasks from the Apps Script web app (docs/google-tasks.md). Its URL and token are
+    secrets: errors never include them."""
+    try:
+        async with client(timeout=30) as c:
+            r = await c.get(url, params={"token": token})
+            r.raise_for_status()
+            d = r.json()
+    except (httpx.HTTPError, ValueError) as e:
+        raise RuntimeError(f"Tasks: {type(e).__name__}") from None
+    if d.get("error"):
+        raise RuntimeError(f"Tasks: {d['error']}")
+    return d.get("tasks", [])
+
+
 # ---------------------------------------------------------------- news
 
 KAGI = "https://news.kagi.com/"

@@ -217,11 +217,15 @@ body.idle .tv-mute:not(.on) { opacity: 0; }
 .ag-dayname { font-size: 1.5rem; color: var(--ink-3); text-transform: lowercase; margin-bottom: .3rem; }
 .ag-ev { display: flex; align-items: baseline; gap: 1rem; font-size: 1.8rem; line-height: 1.35; white-space: nowrap; }
 .ag-ev::before { content: ""; flex: none; width: .4rem; height: 1.6rem; background: var(--c, #888); align-self: center; }
-.ag-time { flex: none; color: var(--ink-2); font-variant-numeric: tabular-nums; min-width: 4.8rem; }
+.ag-time { flex: none; color: var(--ink-2); font-variant-numeric: tabular-nums; min-width: 6.4rem; }
 .ag-title { overflow: hidden; text-overflow: ellipsis; }
 .ag-ev.now .ag-title { font-weight: 600; }
 .ag-ev.now .ag-time { color: var(--ink); }
 .ag-empty { font-size: 1.8rem; color: var(--ink-3); }
+/* Tasks: a hollow square instead of the calendar bar; overdue in amber. */
+.ag-ev.task::before { width: 1rem; height: 1rem; background: none; border: .2rem solid var(--c); box-sizing: border-box; }
+.ag-ev.task .ag-time { color: var(--ink-3); }
+.ag-ev.overdue .ag-time { color: #ffb900; }
 .ag-back { background: #18181a !important; gap: 1rem; padding: 1.8rem 2.4rem 1.4rem; }
 .ag-back .back-title { font-size: 2.6rem; }
 .ag-cals { flex: 1; min-height: 0; display: flex; flex-wrap: wrap; align-content: flex-start; gap: .6rem; }

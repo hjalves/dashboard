@@ -31,6 +31,13 @@ days = 14            # how far ahead the agenda tile looks
 # url = "https://calendar.google.com/calendar/ical/…/private-…/basic.ics"
 # color = "#e3008c"
 
+[tasks]
+# Google Tasks via the Apps Script web app in docs/google-tasks.md. url and token are secrets.
+# url = "https://script.google.com/macros/s/…/exec"
+# token = "…"
+name = "Tasks"
+color = "#ffb900"
+
 [news]
 # Names from https://news.kagi.com/kite.json
 categories = ["Portugal", "World", "Europe", "Business", "Technology", "Linux & OSS"]

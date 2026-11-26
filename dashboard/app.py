@@ -116,6 +116,8 @@ def build_app(cfg: dict) -> Starlette:
         return r
     kagi_categories = Cached("kagi-categories", 86400, sources.fetch_kagi_categories, retry=120)
     cal_cfg = cfg["calendar"]
+    tk = cfg["tasks"]
+    tasks = Cached("tasks", 300, lambda: sources.fetch_tasks(tk["url"], tk["token"])) if tk["url"] else None
     calendar = Cached("calendar", 600, lambda: sources.fetch_calendar(list(cal_cfg["calendars"]), int(cal_cfg["days"])))
     github = Cached("github", 300, lambda: sources.fetch_github(int(g["repos"]), int(g["commits"])))
     # TV: the configured channels; the one on screen is chosen by right-clicking the tile (state).
@@ -139,20 +141,28 @@ def build_app(cfg: dict) -> Starlette:
         return list(state.get("calendar_hidden") or [])
 
     async def calendar_ep(_):
-        r = await calendar.get()
+        r, t = await asyncio.gather(calendar.get(), tasks.get() if tasks else asyncio.sleep(0, None))
         hidden = set(calendar_hidden())
-        cals = [{"name": c["name"], "color": c.get("color"), "hidden": c["name"] in hidden} for c in cal_cfg["calendars"]]
+        sources_ = [{"name": c["name"], "color": c.get("color")} for c in cal_cfg["calendars"]]
+        if tasks:
+            sources_.append({"name": tk["name"], "color": tk["color"]})
+        cals = [{**c, "hidden": c["name"] in hidden} for c in sources_]
         data = r["data"]
         if data:
             data = {**data, "events": [e for e in data["events"] if e["calendar"] not in hidden],
                     "errors": [e for e in data["errors"] if e.split(":")[0] not in hidden]}
+            if t is not None:
+                if t["data"] is not None and tk["name"] not in hidden:
+                    data["tasks"] = [{**x, "calendar": tk["name"], "color": tk["color"]} for x in t["data"]]
+                if t["error"] and tk["name"] not in hidden:
+                    data["errors"] = data["errors"] + [f"{tk['name']}: unavailable"]
         return JSONResponse({**r, "data": data, "calendars": cals})
 
     async def calendar_visible_ep(req):
         if not csrf_ok(req):
             return JSONResponse({"error": "missing X-Dashboard header"}, status_code=403)
         hidden = (await req.json()).get("hidden")
-        names = {c["name"] for c in cal_cfg["calendars"]}
+        names = {c["name"] for c in cal_cfg["calendars"]} | ({tk["name"]} if tasks else set())
         if not isinstance(hidden, list) or not all(isinstance(h, str) and h in names for h in hidden):
             return JSONResponse({"error": "hidden must list configured calendar names"}, status_code=400)
         state["calendar_hidden"] = hidden

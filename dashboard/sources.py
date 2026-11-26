@@ -409,7 +409,9 @@ async def fetch_metno(lat: float, lon: float, place: str, hours: int) -> dict:
             "cloud": inst.get("cloud_area_fraction"),
             "symbol": row["symbol"],
             "desc": names.get(row["symbol"]),
-            "day": row["day"],
+            # From the sun at mid-hour, not the symbol: symbols without day/night variants
+            # ("cloudy", "rain", …) carry no variant at all, which used to read as daytime.
+            "day": is_day(lat, lon, row["t"] + timedelta(minutes=30)),
         })
         if len(hourly) >= hours:
             break

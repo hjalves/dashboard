@@ -450,6 +450,33 @@ async def fetch_metno(lat: float, lon: float, place: str, hours: int) -> dict:
     }
 
 
+# ---------------------------------------------------------------- moon
+
+METNO_MOON = "https://api.met.no/weatherapi/sunrise/3.0/moon?lat={lat:.4f}&lon={lon:.4f}&date={date}&offset=+00:00"
+
+
+async def fetch_moon(lat: float, lon: float) -> dict:
+    """Moon phase and rise/set times from MET Norway's sunrise API, for today and tomorrow (local
+    dates), so "tonight" is covered across midnight."""
+    today = datetime.now(TZ).date()
+    async with client() as c:
+        rs = await asyncio.gather(*(c.get(METNO_MOON.format(lat=lat, lon=lon, date=today + timedelta(days=k)))
+                                    for k in (0, 1)))
+    events, phase = [], None
+    for r in rs:
+        r.raise_for_status()
+        p = r.json()["properties"]
+        phase = p["moonphase"] if phase is None else phase
+        for kind in ("moonrise", "moonset"):
+            if p.get(kind) and p[kind].get("time"):
+                t = datetime.fromisoformat(p[kind]["time"]).astimezone(TZ)
+                events.append({"kind": kind.removeprefix("moon"), "time": t.isoformat()})
+    events.sort(key=lambda e: e["time"])
+    # Phase angle: 0 new, 90 first quarter, 180 full, 270 last quarter. Lit fraction from it.
+    lit = round((1 - math.cos(math.radians(phase))) / 2 * 100) if phase is not None else None
+    return {"phase": phase, "lit": lit, "events": events}
+
+
 # ---------------------------------------------------------------- calendar
 
 async def fetch_calendar(calendars: list[dict], days: int) -> dict:

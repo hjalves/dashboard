@@ -79,12 +79,14 @@ export async function loadWeather() {
     // The console's own sensor, indoors: fixed slot before UV (which hides at night).
     if (st.temp_in != null) facts.push(`<span>inside <b>${deg(st.temp_in)}</b>${st.hum_in != null ? ` · <b>${st.hum_in}%</b>` : ""}</span>`);
     if (st.uv != null && f && isDaytime(f)) facts.push(`<span>UV <b>${st.uv}</b></span>`);
+    else if (f && w.moon) facts.push(moonFact(w.moon));
   } else if (first) {
     // Station off: the forecast's current hour.
     if (first.hum != null) facts.push(`<span>humidity <b>${Math.round(first.hum)}%</b></span>`);
     if (first.wind_kmh != null) facts.push(`<span>wind <b>${Math.round(first.wind_kmh)}</b> km/h</span>`);
     if (first.rain_mm) facts.push(`<span>rain this hour <b>${fmtMM(first.rain_mm)}</b> mm</span>`);
     else if (first.rain_prob >= 30) facts.push(`<span>rain chance <b>${Math.round(first.rain_prob)}%</b></span>`);
+    if (!isDaytime(f) && w.moon) facts.push(moonFact(w.moon));
   }
   $("w-facts").innerHTML = facts.join("");
 
@@ -112,6 +114,20 @@ function renderDays(f) {
       <div class="ddesc">${esc(d.desc || "")}</div>
       <div class="drain">rain <b>${d.rain_mm != null ? fmtMM(d.rain_mm) + " mm" : d.rain_prob != null ? Math.round(d.rain_prob) + "%" : "--"}</b></div></div>`;
   }).join("");
+}
+
+/* The moon at night (MET Norway): phase icon, how much is lit, and when it sets if it's up, or
+   when it rises if not. Phase angle: 0 new, 90 first quarter, 180 full, 270 last quarter. */
+const MOON_PHASES = ["new", "waxing-crescent", "first-quarter", "waxing-gibbous", "full", "waning-gibbous", "last-quarter", "waning-crescent"];
+function moonFact(m) {
+  if (m.phase == null) return "";
+  const phase = MOON_PHASES[Math.round(m.phase / 45) % 8];
+  const now = Date.now(), next = (m.events || []).find((e) => new Date(e.time).getTime() > now);
+  const when = next ? `${next.kind === "set" ? "sets" : "rises"} ${hhmm(next.time)}` : "";
+  const tip = `${phase.replace("-", " ")} · ${m.lit}% lit` + (m.events || []).filter((e) => new Date(e.time).getTime() > now - 12 * 3600e3)
+    .slice(0, 3).map((e) => ` · ${e.kind === "set" ? "sets" : "rises"} ${hhmm(e.time)}`).join("");
+  return `<span class="moon" title="${esc(tip)}"><i class="wi" style="--icon:url(/static/icons/moon-${phase}.svg)"></i>` +
+    `<b>${m.lit}%</b>${when ? " · " + when : ""}</span>`;
 }
 
 function isDaytime(f) {

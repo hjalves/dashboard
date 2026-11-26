@@ -94,6 +94,7 @@ def build_app(cfg: dict) -> Starlette:
         return await sources.fetch_metno(float(w["latitude"]), float(w["longitude"]), w["place"], int(w["hours"]))
 
     forecast = Cached("forecast", 1800, fetch_forecast)
+    moon = Cached("moon", 3 * 3600, lambda: sources.fetch_moon(float(w["latitude"]), float(w["longitude"])), retry=600)
 
     # Network scene: the router's lanwatch and huawei-trafficd (anonymous ubus reads).
     router = cfg["network"]["router_ubus"]
@@ -133,8 +134,10 @@ def build_app(cfg: dict) -> Starlette:
     async def weather(_):
         # With the station turned off (right-click the "now" tile) it isn't even queried.
         use_station = station is not None and prefs()["weather_station"]
-        parts = await asyncio.gather(forecast.get(), station.get() if use_station else asyncio.sleep(0, None))
-        return JSONResponse({"forecast": parts[0], "station": parts[1], "station_enabled": use_station})
+        parts = await asyncio.gather(forecast.get(), station.get() if use_station else asyncio.sleep(0, None),
+                                     moon.get())
+        return JSONResponse({"forecast": parts[0], "station": parts[1], "station_enabled": use_station,
+                             "moon": parts[2]["data"]})
 
     # Calendars hidden from the agenda (right-click the tile); still fetched, so un-hiding is instant.
     def calendar_hidden() -> list[str]:

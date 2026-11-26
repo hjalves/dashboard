@@ -255,6 +255,8 @@ body.idle .tv-mute:not(.on) { opacity: 0; }
 /* Meteocons monochrome icons, tinted with the text colour through a mask. */
 .wi { display: inline-block; flex: none; background: currentColor;
   -webkit-mask: var(--icon) center / contain no-repeat; mask: var(--icon) center / contain no-repeat; }
+.facts .moon { display: inline-flex; align-items: center; gap: .5rem; }
+.facts .moon .wi { width: 2.4rem; height: 2.4rem; margin: -.4rem 0; }
 #w-icon .wi { position: absolute; top: .6rem; right: 1.2rem; width: 10rem; height: 10rem; }
 .day .wi { width: 6.4rem; height: 6.4rem; margin: .2rem 0 0 -.9rem; }
 

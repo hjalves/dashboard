@@ -38,7 +38,9 @@ DEFAULTS = {
     "tv": {
         "playlist": "https://m3upt.com/iptv",
         "epg": "https://m3upt.com/epg",
-        "channel": "RTP Notícias",
+        "channel": "RTP Notícias",  # the default; right-click the TV tile to switch
+        # Channels offered on the TV tile's back (names as in the playlist)
+        "channels": ["RTP Notícias", "SIC Notícias", "CNN Portugal", "Euronews PT"],
     },
 }
 

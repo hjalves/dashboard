@@ -34,4 +34,5 @@ commits = 3
 [tv]
 playlist = "https://m3upt.com/iptv"
 epg = "https://m3upt.com/epg"
-channel = "RTP Notícias"
+channel = "RTP Notícias"            # default; right-click the TV tile to switch
+channels = ["RTP Notícias", "SIC Notícias", "CNN Portugal", "Euronews PT"]

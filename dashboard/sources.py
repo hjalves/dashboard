@@ -611,6 +611,10 @@ async def fetch_github(repos: int, commits: int) -> dict:
 _ATTR = re.compile(r'([\w-]+)="([^"]*)"')
 
 
+# Request headers the playlist asks players to send (VLC options), as HTTP header names.
+_VLCOPT = {"http-user-agent": "User-Agent", "http-origin": "Origin", "http-referrer": "Referer"}
+
+
 def parse_m3u(text: str) -> list[dict]:
     chans, cur = [], None
     for line in text.splitlines():
@@ -619,6 +623,11 @@ def parse_m3u(text: str) -> list[dict]:
             head, _, name = line.partition(",")
             cur = dict(_ATTR.findall(head))
             cur["name"] = name.strip()
+            cur["headers"] = {}
+        elif line.startswith("#EXTVLCOPT:") and cur is not None:
+            key, _, value = line[len("#EXTVLCOPT:"):].partition("=")
+            if key in _VLCOPT:
+                cur["headers"][_VLCOPT[key]] = value.strip().strip('"')
         elif line and not line.startswith("#") and cur is not None:
             cur["url"] = line
             chans.append(cur)
@@ -631,44 +640,58 @@ def _xmltv_time(s: str) -> datetime:
     return datetime.strptime(s.strip(), "%Y%m%d%H%M%S %z")
 
 
-def parse_epg(gz: bytes, channel_id: str, hours: int = 30) -> list[dict]:
-    """Programmes for one channel from now-1h to now+hours, streamed from gzipped XMLTV."""
+def parse_epg(gz: bytes, channel_ids: set[str], hours: int = 30) -> dict[str, list[dict]]:
+    """Programmes for the given channels from now-1h to now+hours, streamed from gzipped XMLTV."""
     now = datetime.now(timezone.utc)
     lo, hi = now - timedelta(hours=1), now + timedelta(hours=hours)
-    progs = []
+    progs: dict[str, list[dict]] = {cid: [] for cid in channel_ids}
     for _, el in ET.iterparse(gzip.GzipFile(fileobj=io.BytesIO(gz)), events=("end",)):
         if el.tag == "programme":
-            if el.get("channel") == channel_id:
+            cid = el.get("channel")
+            if cid in progs:
                 start, stop = _xmltv_time(el.get("start")), _xmltv_time(el.get("stop"))
                 if stop >= lo and start <= hi:
-                    progs.append({"start": start.isoformat(), "stop": stop.isoformat(),
-                                  "title": el.findtext("title"), "desc": el.findtext("desc")})
+                    progs[cid].append({"start": start.isoformat(), "stop": stop.isoformat(),
+                                       "title": el.findtext("title"), "desc": el.findtext("desc")})
             el.clear()
         elif el.tag == "channel":
             el.clear()
-    progs.sort(key=lambda p: p["start"])
+    for p in progs.values():
+        p.sort(key=lambda x: x["start"])
     return progs
 
 
-async def fetch_tv(playlist: str, channel: str) -> dict:
+async def _needs_proxy(c: httpx.AsyncClient, url: str) -> bool:
+    """Would a web page (no Referer, our Origin) be allowed to load this stream? Probed the way a
+    browser asks: if the server refuses or doesn't allow cross-origin reads, play it through
+    /api/tvproxy, which sends the headers the playlist specifies."""
+    try:
+        r = await c.get(url, headers={"User-Agent": BROWSER_UA, "Origin": "http://dashboard.invalid"}, timeout=15)
+    except httpx.HTTPError:
+        return False  # unreachable either way; don't add a proxy hop for nothing
+    acao = r.headers.get("access-control-allow-origin", "")
+    return r.status_code != 200 or acao not in ("*", "http://dashboard.invalid")
+
+
+async def fetch_tv(playlist: str, names: list[str]) -> dict:
+    """The configured channels from the playlist (in that order), with their headers, logos, guide
+    ids and whether they need the proxy."""
     async with client(headers={"User-Agent": BROWSER_UA}) as c:
         r = await c.get(playlist)
         r.raise_for_status()
-    chans = parse_m3u(r.text)
-    match = next((ch for ch in chans if ch["name"].casefold() == channel.casefold()), None)
-    if not match:
-        raise RuntimeError(f"channel {channel!r} not in playlist")
+        chans = {ch["name"].casefold(): ch for ch in parse_m3u(r.text)}
+        found = [chans[n.casefold()] for n in names if n.casefold() in chans]
+        proxies = await asyncio.gather(*(_needs_proxy(c, ch["url"]) for ch in found))
     return {
-        "name": match["name"],
-        "url": match["url"],
-        "logo": match.get("tvg-logo"),
-        "tvg_id": match.get("tvg-id"),
-        "channels": [ch["name"] for ch in chans if ch.get("group-title") == match.get("group-title")],
+        "channels": [{"name": ch["name"], "url": ch["url"], "logo": ch.get("tvg-logo"), "tvg_id": ch.get("tvg-id"),
+                      "headers": ch["headers"], "proxy": px} for ch, px in zip(found, proxies)],
+        "missing": [n for n in names if n.casefold() not in chans],
     }
 
 
-async def fetch_epg(epg_url: str, tvg_id: str) -> list[dict]:
+async def fetch_epg(epg_url: str, tvg_ids: set[str]) -> dict[str, list[dict]]:
     async with client(headers={"User-Agent": BROWSER_UA}, timeout=120) as c:
         r = await c.get(epg_url)
         r.raise_for_status()
-    return await asyncio.to_thread(parse_epg, r.content, tvg_id)
+    return await asyncio.to_thread(parse_epg, r.content, tvg_ids)
+

@@ -1,6 +1,7 @@
 /* Live TV tile (hls.js, global from vendor/hls.min.js). Click toggles sound.
    Leaving the scene stops a muted channel (saves CPU); with sound on it keeps playing. */
-import { $, getJSON, hhmm, poll, MIN } from "../core.js";
+import { $, esc, getJSON, postJSON, hhmm, poll, MIN } from "../core.js";
+import { showBack, hideBack, isBack, onRightClick } from "../backs.js";
 
 export const tv = {
   hls: null, url: null, epg: [], lastTime: 0, stuckSince: 0, shownTitle: null, hideTimer: 0, suspended: false,
@@ -53,11 +54,19 @@ export const tv = {
   },
 };
 
+let lineup = [];
+
 async function loadTv() {
-  const r = await getJSON("/api/tv");
+  applyTv(await getJSON("/api/tv"));
+}
+
+function applyTv(r) {
+  lineup = r.lineup || [];
   const ch = r.channel.data;
   if (!ch) { $("tv-status").textContent = "channel unavailable"; return; }
   $("tv-channel").textContent = ch.name;
+  // Each channel has its own guide: forget the shown title so the overlay comes up for the new one.
+  if (ch.url !== tv.url) tv.shownTitle = null;
   if (ch.url !== tv.url && !tv.suspended) tv.start(ch.url);
   else if (ch.url !== tv.url) tv.url = ch.url;
   tv.epg = (r.epg.data || []).map((p) => ({ ...p, s: new Date(p.start).getTime(), e: new Date(p.stop).getTime() }));
@@ -82,8 +91,35 @@ function renderEpg() {
   if (title !== tv.shownTitle) { tv.shownTitle = title; showOverlay(20000); }
 }
 
+/* Back of the tile: the channels, each with what's on now; a click switches and turns it back. */
+function renderChannels() {
+  $("ch-grid").innerHTML = lineup.map((c) => `<div class="ch${c.current ? " on" : ""}" data-name="${esc(c.name)}">
+    <div class="ch-name">${esc(c.name)}</div><div class="ch-now">${esc(c.now || "")}</div></div>`).join("");
+}
+
 export function initTv(scene, onSceneChange) {
+  onRightClick($("tv"), async () => {
+    $("ch-msg").textContent = "";
+    renderChannels();
+    showBack($("tv"));
+    try { applyTv(await getJSON("/api/tv")); renderChannels(); } catch (e) { /* keep what we have */ }
+  });
+  $("ch-grid").addEventListener("click", async (e) => {
+    e.stopPropagation();
+    const c = e.target.closest("[data-name]");
+    if (!c) return;
+    $("ch-msg").textContent = "tuning…";
+    try {
+      const r = await postJSON("/api/tv/channel", { name: c.dataset.name });
+      hideBack();
+      applyTv(r);
+    } catch (err) {
+      $("ch-msg").textContent = "not changed: " + err.message;
+    }
+  });
+  $("ch-cancel").addEventListener("click", (e) => { e.stopPropagation(); hideBack(); });
   $("tv").addEventListener("click", () => {
+    if (isBack($("tv"))) return;  // clicks on the back choose a channel, not sound
     const v = $("tv-video");
     v.muted = !v.muted;
     $("tv-mute").classList.toggle("on", !v.muted);

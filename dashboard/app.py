@@ -6,14 +6,19 @@ serving the previous data (ok=false, error set) so tiles can show "stale" instea
 
 import asyncio
 import contextlib
+import re
+from datetime import datetime, timezone
+from urllib.parse import urlencode, urljoin, urlsplit
 import hashlib
 import logging
 import time
 from pathlib import Path
 
+import httpx
 import uvicorn
+from starlette.background import BackgroundTask
 from starlette.applications import Starlette
-from starlette.responses import FileResponse, JSONResponse, Response
+from starlette.responses import FileResponse, JSONResponse, Response, StreamingResponse
 from starlette.routing import Mount, Route
 from starlette.staticfiles import StaticFiles
 
@@ -110,13 +115,13 @@ def build_app(cfg: dict) -> Starlette:
         return r
     kagi_categories = Cached("kagi-categories", 86400, sources.fetch_kagi_categories, retry=120)
     github = Cached("github", 300, lambda: sources.fetch_github(int(g["repos"]), int(g["commits"])))
-    tv = Cached("tv", 6 * 3600, lambda: sources.fetch_tv(t["playlist"], t["channel"]), retry=300)
+    # TV: the configured channels; the one on screen is chosen by right-clicking the tile (state).
+    tv = Cached("tv", 6 * 3600, lambda: sources.fetch_tv(t["playlist"], list(t["channels"])), retry=300)
 
     async def epg_fetch():
         info = (await tv.get())["data"]
-        if not info or not info.get("tvg_id"):
-            return []
-        return await sources.fetch_epg(t["epg"], info["tvg_id"])
+        ids = {ch["tvg_id"] for ch in (info or {}).get("channels", []) if ch.get("tvg_id")}
+        return await sources.fetch_epg(t["epg"], ids) if ids else {}
 
     epg = Cached("epg", 6 * 3600, epg_fetch, retry=900)
 
@@ -246,9 +251,86 @@ def build_app(cfg: dict) -> Starlette:
     async def github_ep(_):
         return JSONResponse(await github.get())
 
+    def tv_channels() -> list[dict]:
+        return ((tv.data or {}).get("channels")) or []
+
+    def current_channel() -> dict | None:
+        chans = tv_channels()
+        want = (state.get("tv_channel") or t["channel"]).casefold()
+        return next((c for c in chans if c["name"].casefold() == want), chans[0] if chans else None)
+
+    def play_url(ch: dict) -> str:
+        if not ch["proxy"]:
+            return ch["url"]
+        return "/api/tvproxy?" + urlencode({"c": ch["name"], "u": ch["url"]})
+
+    def now_title(progs: list[dict]) -> str | None:
+        now = datetime.now(timezone.utc).isoformat()
+        return next((p["title"] for p in progs if p["start"] <= now < p["stop"]), None)
+
     async def tv_ep(_):
         info, guide = await asyncio.gather(tv.get(), epg.get())
-        return JSONResponse({"channel": info, "epg": guide})
+        ch = current_channel()
+        guides = guide["data"] or {}
+        channel = {**info, "data": None}
+        if ch:
+            channel["data"] = {"name": ch["name"], "url": play_url(ch), "logo": ch["logo"], "tvg_id": ch["tvg_id"],
+                               "proxied": ch["proxy"]}
+        return JSONResponse({
+            "channel": channel,
+            "epg": {**guide, "data": guides.get(ch["tvg_id"], []) if ch else []},
+            "lineup": [{"name": c["name"], "logo": c["logo"], "now": now_title(guides.get(c["tvg_id"], [])),
+                        "current": ch is not None and c["name"] == ch["name"]} for c in tv_channels()],
+        })
+
+    async def tv_channel_ep(req):
+        if not csrf_ok(req):
+            return JSONResponse({"error": "missing X-Dashboard header"}, status_code=403)
+        name = (await req.json()).get("name")
+        await tv.get()
+        if not any(c["name"] == name for c in tv_channels()):
+            return JSONResponse({"error": f"unknown channel {name!r}"}, status_code=400)
+        state["tv_channel"] = name
+        config.save_state(state)
+        log.info("tv channel set to %s", name)
+        return await tv_ep(req)
+
+    # Proxy for channels whose servers refuse web pages (e.g. they need their own Origin/Referer):
+    # fetches with the playlist's headers, only from that channel's host, and rewrites playlists
+    # so their segments come through here too.
+    proxy_client = httpx.AsyncClient(timeout=20, follow_redirects=True)
+
+    async def tvproxy_ep(req):
+        name, url = req.query_params.get("c", ""), req.query_params.get("u", "")
+        ch = next((c for c in tv_channels() if c["name"] == name and c["proxy"]), None)
+        if not ch or urlsplit(url).scheme not in ("http", "https") or \
+                urlsplit(url).hostname != urlsplit(ch["url"]).hostname:
+            return Response("not a proxied channel URL", status_code=403)
+        headers = {"User-Agent": sources.BROWSER_UA, **ch["headers"]}
+        upstream = await proxy_client.send(proxy_client.build_request("GET", url, headers=headers), stream=True)
+        ctype = upstream.headers.get("content-type", "")
+        if upstream.status_code != 200:
+            await upstream.aclose()
+            return Response(status_code=upstream.status_code)
+        if "mpegurl" in ctype.lower() or urlsplit(url).path.endswith(".m3u8"):
+            text = (await upstream.aread()).decode("utf-8", "replace")
+            await upstream.aclose()
+            base = str(upstream.url)
+
+            def wrap(u: str) -> str:
+                return "/api/tvproxy?" + urlencode({"c": name, "u": urljoin(base, u)})
+
+            out = []
+            for line in text.splitlines():
+                if line and not line.startswith("#"):
+                    line = wrap(line.strip())
+                elif 'URI="' in line:
+                    line = re.sub(r'URI="([^"]+)"', lambda m: f'URI="{wrap(m.group(1))}"', line)
+                out.append(line)
+            return Response("\n".join(out) + "\n", media_type="application/vnd.apple.mpegurl",
+                            headers={"Cache-Control": "no-cache"})
+        return StreamingResponse(upstream.aiter_bytes(), media_type=ctype or "video/mp2t",
+                                 background=BackgroundTask(upstream.aclose))
 
     # Changes whenever a static file changes, so open pages reload themselves after a deploy.
     digest = hashlib.sha256()
@@ -315,6 +397,8 @@ def build_app(cfg: dict) -> Starlette:
             Route("/api/news/filters", news_filters_ep, methods=["GET", "POST"]),
             Route("/api/github", github_ep),
             Route("/api/tv", tv_ep),
+            Route("/api/tv/channel", tv_channel_ep, methods=["POST"]),
+            Route("/api/tvproxy", tvproxy_ep),
             Route("/api/version", version),
             Route("/api/stats", stats, methods=["GET", "POST"]),
             Mount("/static", RevalidatedStatic(directory=STATIC), name="static"),

@@ -155,6 +155,17 @@ body.idle, body.idle * { cursor: none !important; }
 body.idle .tv-mute:not(.on) { opacity: 0; }
 .tv-status { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 2rem; color: var(--ink-3); pointer-events: none; }
 
+.tv-back { background: #141416 !important; }
+.ch-grid { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: 1fr; gap: .8rem; }
+.ch { position: relative; padding: 1.6rem 2rem; background: rgba(255, 255, 255, .07); cursor: pointer;
+  display: flex; flex-direction: column; justify-content: flex-end; min-height: 0; overflow: hidden; transition: background .15s; }
+.ch:hover { background: rgba(255, 255, 255, .14); }
+.ch.on { background: #b3261e; }
+.ch.on:hover { background: #c4372e; }
+.ch-name { font-size: 2.6rem; font-weight: 400; }
+.ch.on .ch-name::after { content: "  ✓"; font-size: 2rem; }
+.ch-now { font-size: 1.6rem; color: var(--ink-2); margin-top: .3rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
 /* ---------------------------------------------------------------- news */
 .news { grid-column: 7 / 13; grid-row: 2; background: var(--news); padding: 0; }
 .news-img { position: absolute; inset: 0; background: center / cover no-repeat; transition: opacity 1s ease; }

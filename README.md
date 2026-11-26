@@ -11,7 +11,7 @@ fetches and caches every source; the page is plain HTML/CSS/JS shown fullscreen 
 | forecast | MET Norway Locationforecast 2.0 (`complete`, by coordinates): hourly temperature, rain in mm and symbol; the two day columns are summed from it (min/max, total mm, the 06–18 h symbol). Symbol names from MET's `legend.csv`. Or IPMA (`source = "ipma"`), where `-99` means "same as the previous hour" | 30 min |
 | news | Kagi News (`news.kagi.com/<category>.json`, published once a day; the tile shows the edition date), up to 12 stories per category, alternating categories every 14 s | 30 min |
 | github | GraphQL: your repos by last push, with their latest commits | 5 min |
-| tv | M3UPT playlist (channel looked up by name) + its XMLTV EPG; plays with hls.js | 6 h |
+| tv | M3UPT playlist (the channels in `[tv] channels`, looked up by name) + its XMLTV EPG; plays with hls.js. **Right-click the TV** to pick a channel: tiles show what's on each now | 6 h |
 
 Every `/api/*` answer is `{ok, updated, age, error, data}`: a failed refresh keeps the last data, so
 a tile goes "stale" instead of blank. The page polls `/api/version` and reloads itself after a deploy;
@@ -126,6 +126,11 @@ maximizes it without a titlebar:
 
 Notes:
 - RTP answers `204` to requests with a foreign `Referer`, so the page sets `referrer=no-referrer`.
+- Some channels only serve requests that claim to come from their own site (SIC Notícias: 403
+  without `Origin`/`Referer: https://sicnoticias.pt`, playlist and segments alike). Every 6 h the
+  server probes each channel the way a browser would; those that refuse play through
+  `/api/tvproxy`, which sends the headers the playlist lists (`#EXTVLCOPT`), fetches only from that
+  channel's host and rewrites playlists so segments come through it too. The rest play directly.
 - The GitHub token comes from `gh auth token` (keyring) unless `GITHUB_TOKEN` is set in the unit.
 
 ## Browser choice

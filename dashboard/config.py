@@ -29,7 +29,7 @@ DEFAULTS = {
     "news": {
         # Kagi News category names, as listed in https://news.kagi.com/kite.json
         "categories": ["Portugal", "World", "Europe", "Business", "Technology", "Linux & OSS"],
-        "per_category": 8,
+        "per_category": 12,
     },
     "github": {
         "repos": 8,

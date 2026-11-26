@@ -15,7 +15,7 @@ function applyNews(r) {
   const cats = r.data.categories.filter((c) => c.stories.length);
   const flat = [];
   for (let k = 0; cats.some((c) => k < c.stories.length); k++)
-    cats.forEach((c) => { if (k < c.stories.length) flat.push({ ...c.stories[k], cat: c.name, k, total: c.stories.length }); });
+    cats.forEach((c) => { if (k < c.stories.length) flat.push({ ...c.stories[k], cat: c.name, k, total: c.stories.length, edition: c.timestamp }); });
   const first = !news.stories.length;
   news.stories = flat;
   if (first) nextStory();
@@ -32,7 +32,9 @@ function nextStory() {
     const img = $("news-img");
     img.style.opacity = 0;
     setTimeout(() => { img.style.backgroundImage = s.image ? `url("${s.image}")` : "none"; img.style.opacity = s.image ? 1 : 0; }, 400);
-    $("news-cat").textContent = s.cat;
+    // Kagi publishes once a day: the edition date says how fresh the stories are.
+    const ed = s.edition ? new Date(s.edition * 1000).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "";
+    $("news-cat").innerHTML = esc(s.cat) + (ed ? `<span class="edition"> · Kagi, ${esc(ed)}</span>` : "");
     $("news-dots").innerHTML = Array.from({ length: s.total }, (_, k) => `<i class="${k === s.k ? "on" : ""}"></i>`).join("");
     news.timer = setTimeout(nextStory, 14000);
   };

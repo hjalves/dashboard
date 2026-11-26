@@ -26,6 +26,12 @@ DEFAULTS = {
         # The router's ubus endpoint, for lanwatch and huawei-trafficd (anonymous read)
         "router_ubus": "http://192.168.0.254/ubus",
     },
+    "calendar": {
+        "days": 14,  # how far ahead the agenda looks
+        # [[calendar.calendars]] tables: name, url (iCal; Google's secret address is a secret:
+        # keep it only in config.toml), color
+        "calendars": [],
+    },
     "news": {
         # Kagi News category names, as listed in https://news.kagi.com/kite.json
         "categories": ["Portugal", "World", "Europe", "Business", "Technology", "Linux & OSS"],

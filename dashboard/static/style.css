@@ -210,8 +210,18 @@ body.idle .tv-mute:not(.on) { opacity: 0; }
 .gh { grid-row: 3; background: var(--gh); display: flex; flex-direction: column; }
 #gh0 { grid-column: 1 / 4; background: var(--gh-accent); }
 #gh1 { grid-column: 4 / 7; }
-#gh2 { grid-column: 7 / 10; }
-#gh3 { grid-column: 10 / 13; }
+/* ---------------------------------------------------------------- agenda */
+.agenda { grid-column: 7 / 13; grid-row: 3; background: var(--gh); display: flex; flex-direction: column; }
+.ag-body { flex: 1; min-height: 0; margin-top: 1rem; column-count: 2; column-gap: 3.2rem; column-fill: auto; overflow: hidden; }
+.ag-day { break-inside: avoid; margin-bottom: 1.2rem; }
+.ag-dayname { font-size: 1.5rem; color: var(--ink-3); text-transform: lowercase; margin-bottom: .3rem; }
+.ag-ev { display: flex; align-items: baseline; gap: 1rem; font-size: 1.8rem; line-height: 1.35; white-space: nowrap; }
+.ag-ev::before { content: ""; flex: none; width: .4rem; height: 1.6rem; background: var(--c, #888); align-self: center; }
+.ag-time { flex: none; color: var(--ink-2); font-variant-numeric: tabular-nums; min-width: 4.8rem; }
+.ag-title { overflow: hidden; text-overflow: ellipsis; }
+.ag-ev.now .ag-title { font-weight: 600; }
+.ag-ev.now .ag-time { color: var(--ink); }
+.ag-empty { font-size: 1.8rem; color: var(--ink-3); }
 .gh .top { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; }
 .gh .name { font-size: 2.6rem; font-weight: 400; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .gh .when { font-size: 1.6rem; color: var(--ink-3); white-space: nowrap; }

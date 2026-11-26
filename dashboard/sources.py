@@ -450,6 +450,65 @@ async def fetch_metno(lat: float, lon: float, place: str, hours: int) -> dict:
     }
 
 
+# ---------------------------------------------------------------- calendar
+
+async def fetch_calendar(calendars: list[dict], days: int) -> dict:
+    """Events from iCal feeds (e.g. Google Calendar's secret iCal addresses) from the start of today
+    for `days` days, with repeating events expanded. Errors name the calendar, never its URL: the
+    private addresses are secrets."""
+    import icalendar
+    import recurring_ical_events
+
+    start = datetime.now(TZ).replace(hour=0, minute=0, second=0, microsecond=0)
+    end = start + timedelta(days=days)
+
+    async def one(c: httpx.AsyncClient, cal: dict):
+        try:
+            r = await c.get(cal["url"])
+            r.raise_for_status()
+            return cal, r.content, None
+        except httpx.HTTPError as e:
+            return cal, None, f"{cal['name']}: {type(e).__name__}"
+
+    async with client() as c:
+        results = await asyncio.gather(*(one(c, cal) for cal in calendars))
+
+    events, errors = [], []
+    for cal, body, err in results:
+        if err:
+            errors.append(err)
+            continue
+        try:
+            ics = icalendar.Calendar.from_ical(body)
+            occurrences = recurring_ical_events.of(ics).between(start, end)
+        except Exception as e:  # noqa: BLE001 - a malformed feed shouldn't hide the others
+            errors.append(f"{cal['name']}: {type(e).__name__}")
+            continue
+        for ev in occurrences:
+            dts, dte = ev.get("DTSTART"), ev.get("DTEND")
+            if dts is None:
+                continue
+            s0 = dts.dt
+            e0 = dte.dt if dte is not None else s0
+            all_day = not isinstance(s0, datetime)
+            if all_day:
+                s_iso, e_iso = s0.isoformat(), e0.isoformat()
+            else:
+                s0 = s0 if s0.tzinfo else s0.replace(tzinfo=TZ)
+                e0 = e0 if getattr(e0, "tzinfo", None) else e0.replace(tzinfo=TZ)
+                s_iso, e_iso = s0.astimezone(TZ).isoformat(), e0.astimezone(TZ).isoformat()
+            if str(ev.get("STATUS", "")).upper() == "CANCELLED":
+                continue
+            events.append({
+                "title": str(ev.get("SUMMARY", "")).strip() or "(no title)",
+                "start": s_iso, "end": e_iso, "all_day": all_day,
+                "location": str(ev.get("LOCATION", "")).strip() or None,
+                "calendar": cal["name"], "color": cal.get("color"),
+            })
+    events.sort(key=lambda e: (e["start"][:10], not e["all_day"], e["start"]))
+    return {"events": events, "errors": errors, "from": start.date().isoformat(), "days": days}
+
+
 # ---------------------------------------------------------------- news
 
 KAGI = "https://news.kagi.com/"

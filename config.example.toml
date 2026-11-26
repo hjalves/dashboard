@@ -21,6 +21,16 @@ station_ubus = "http://192.168.0.254/ubus"
 # The router's ubus endpoint (lanwatch, huawei-trafficd; anonymous read)
 router_ubus = "http://192.168.0.254/ubus"
 
+[calendar]
+days = 14            # how far ahead the agenda tile looks
+# One table per calendar. Google Calendar: Settings → the calendar → "Secret address in iCal
+# format". That address is a secret (anyone with it can read the calendar): keep it only in
+# your own config.toml, never in the repo.
+# [[calendar.calendars]]
+# name = "Main"
+# url = "https://calendar.google.com/calendar/ical/…/private-…/basic.ics"
+# color = "#e3008c"
+
 [news]
 # Names from https://news.kagi.com/kite.json
 categories = ["Portugal", "World", "Europe", "Business", "Technology", "Linux & OSS"]

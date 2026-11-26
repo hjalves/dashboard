@@ -6,7 +6,7 @@ const gh = { repos: [], step: 0 };
 async function loadGithub() {
   const r = await getJSON("/api/github");
   if (!r.data) return;
-  gh.repos = r.data.repos.slice(0, 4);
+  gh.repos = r.data.repos.slice(0, document.querySelectorAll(".gh").length);
   gh.repos.forEach((repo, i) => renderRepo(i, true));
 }
 

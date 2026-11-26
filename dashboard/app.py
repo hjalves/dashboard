@@ -115,6 +115,8 @@ def build_app(cfg: dict) -> Starlette:
             r = {**r, "data": sources.filter_news(r["data"], news_filters(), int(n["per_category"]))}
         return r
     kagi_categories = Cached("kagi-categories", 86400, sources.fetch_kagi_categories, retry=120)
+    cal_cfg = cfg["calendar"]
+    calendar = Cached("calendar", 600, lambda: sources.fetch_calendar(list(cal_cfg["calendars"]), int(cal_cfg["days"])))
     github = Cached("github", 300, lambda: sources.fetch_github(int(g["repos"]), int(g["commits"])))
     # TV: the configured channels; the one on screen is chosen by right-clicking the tile (state).
     tv = Cached("tv", 6 * 3600, lambda: sources.fetch_tv(t["playlist"], list(t["channels"])), retry=300)
@@ -131,6 +133,9 @@ def build_app(cfg: dict) -> Starlette:
         use_station = station is not None and prefs()["weather_station"]
         parts = await asyncio.gather(forecast.get(), station.get() if use_station else asyncio.sleep(0, None))
         return JSONResponse({"forecast": parts[0], "station": parts[1], "station_enabled": use_station})
+
+    async def calendar_ep(_):
+        return JSONResponse(await calendar.get())
 
     async def lan_ep(_):
         return JSONResponse(await lan.get())
@@ -428,6 +433,7 @@ def build_app(cfg: dict) -> Starlette:
             Route("/api/events", events_ep),
             Route("/api/control", control_ep, methods=["POST"]),
             Route("/api/qr", qr_ep),
+            Route("/api/calendar", calendar_ep),
             Route("/api/lan", lan_ep),
             Route("/api/internet", internet_ep),
             Route("/api/news", news_ep),

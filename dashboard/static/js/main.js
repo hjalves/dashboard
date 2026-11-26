@@ -5,6 +5,7 @@ import { initClock } from "./home/clock.js";
 import { initWeather } from "./home/weather.js";
 import { initNews } from "./home/news.js";
 import { initGithub } from "./home/github.js";
+import { initAgenda } from "./home/agenda.js";
 import { initTv, tv } from "./home/tv.js";
 import { initNetwork } from "./network/network.js";
 import { initNight } from "./night/night.js";
@@ -16,6 +17,7 @@ initClock(() => {  // resumed from sleep
 initWeather("home");
 initNews("home");
 initGithub("home", activeScene);
+initAgenda("home");
 initTv("home", onSceneChange);
 initNetwork("network", onSceneChange);
 initNight("night", activeScene, onSceneChange, goToScene);

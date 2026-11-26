@@ -6,7 +6,7 @@ Run from the repo: `uv run --with pillow tools/snapshot.py [--host dk@192.168.0.
 On the host, it switches the open page to each scene through POST /api/control, takes a screenshot
 with grim (the Wayland compositor's own capture: real Firefox rendering, no cursor), crops off the
 desktop panel, and finally puts the page back on the scene it was showing. Here it saves
-docs/devlog/YYYY-MM-DD-<scene>.webp and adds a dated entry with the current commit to
+docs/devlog/YYYY-MM-DD-<scene>.jpg and adds a dated entry with the current commit to
 docs/devlog/README.md, with a TODO line for you to describe what changed.
 """
 import argparse
@@ -42,7 +42,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--host", default="dk@192.168.0.2")
     ap.add_argument("--scenes", nargs="+", default=["home", "network", "night"])
-    ap.add_argument("--quality", type=int, default=82, help="WebP quality")
+    ap.add_argument("--quality", type=int, default=90, help="JPEG quality")
     args = ap.parse_args()
 
     stats = api(args.host, "/api/stats")
@@ -67,11 +67,13 @@ def main():
             # The page fills the bottom of the screen; above it is the desktop panel.
             top = max(0, img.height - int(vp["height"] * img.height / vp.get("screen_height", img.height)))
             img = img.crop((0, top, img.width, img.height))
-            name = f"{today}-{scene}.webp"
+            name = f"{today}-{scene}.jpg"
             n = 2
             while (DEVLOG / name).exists():
-                name, n = f"{today}-{scene}-{n}.webp", n + 1
-            img.save(DEVLOG / name, "WEBP", quality=args.quality, method=6)
+                name, n = f"{today}-{scene}-{n}.jpg", n + 1
+            # JPEG, not WebP: readable everywhere (GitHub's iOS app can't show WebP). No chroma
+            # subsampling, so small text and thin coloured lines stay sharp.
+            img.save(DEVLOG / name, "JPEG", quality=args.quality, subsampling=0, optimize=True, progressive=True)
             saved.append((scene, name))
             print(f"{scene}: docs/devlog/{name} ({(DEVLOG / name).stat().st_size // 1024} KB)")
     finally:

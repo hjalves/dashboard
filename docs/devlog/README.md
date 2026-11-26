@@ -11,13 +11,13 @@ Taken with `tools/snapshot.py`.
   night schedule); MET Norway forecast with rain in mm and Meteocons icons; station pressure,
   indoor and UV; Kagi edition date; network scene from lanwatch and huawei-trafficd.
 
-![home](2026-11-26-home.webp)
-![network](2026-11-26-network.webp)
-![night](2026-11-26-night.webp)
+![home](2026-11-26-home.jpg)
+![network](2026-11-26-network.jpg)
+![night](2026-11-26-night.jpg)
 
 ## 2026-11-25 · `2310dad` Metro-style dashboard: clock, weather, Kagi news, GitHub, RTP Notícias
 
 - The first version: clock, weather now and the next hours (IPMA, Lisboa), RTP Notícias, Kagi News,
   four GitHub tiles. Rendered in a test browser on the dev VM (Chromium), not on the kiosk itself.
 
-![home](2026-11-25-home.webp)
+![home](2026-11-25-home.jpg)

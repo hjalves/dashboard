@@ -109,7 +109,7 @@ uv run --with pillow tools/snapshot.py     # captures home, network and night on
 ```
 
 It switches the open page through each scene (POST `/api/control`, which pages receive over the
-`/api/events` stream), captures with `grim`, crops the panel off, saves WebP files and adds an
+`/api/events` stream), captures with `grim`, crops the panel off, saves JPEG files (not WebP: GitHub's iOS app can't show it) and adds an
 entry to `docs/devlog/README.md` with the current commit and a TODO line to describe the change.
 The page goes back to the scene it was on. Screenshots show private repo names, LAN devices and
 what's on TV: keep that in mind if the repo is ever made public.

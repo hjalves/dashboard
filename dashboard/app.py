@@ -7,10 +7,12 @@ serving the previous data (ok=false, error set) so tiles can show "stale" instea
 import asyncio
 import contextlib
 import hashlib
+import io
 import logging
 import time
 from pathlib import Path
 
+import segno
 import uvicorn
 from starlette.applications import Starlette
 from starlette.responses import FileResponse, JSONResponse, Response
@@ -174,7 +176,8 @@ def build_app(cfg: dict) -> Starlette:
 
     # Simple display preferences changed from the page (right-click), with their types and defaults.
     # name: (type, default, allowed values or None)
-    PREFS = {"clock_seconds": (bool, False, None), "forecast_step": (int, 1, (1, 3))}
+    PREFS = {"clock_seconds": (bool, False, None), "forecast_step": (int, 1, (1, 3)),
+             "news_qr": (bool, False, None)}
 
     def prefs() -> dict:
         saved = state.get("prefs", {})
@@ -268,6 +271,23 @@ def build_app(cfg: dict) -> Starlette:
             return Response(status_code=204)
         return JSONResponse(client_stats)
 
+    # QR codes for story links, made here (no third-party service sees what's being read).
+    qr_cache: dict[str, bytes] = {}
+
+    async def qr_ep(req):
+        text = req.query_params.get("text", "")
+        if not text.startswith(("https://", "http://")) or len(text) > 600:
+            return Response("http(s) URL of up to 600 characters only", status_code=400)
+        if text not in qr_cache:
+            buf = io.BytesIO()
+            # Low error correction keeps the code coarse, so it scans from further away.
+            segno.make(text, error="l", micro=False).save(
+                buf, kind="svg", border=2, dark="#111111", light="#ffffff", xmldecl=False)
+            if len(qr_cache) > 200:
+                qr_cache.clear()
+            qr_cache[text] = buf.getvalue()
+        return Response(qr_cache[text], media_type="image/svg+xml", headers={"Cache-Control": "max-age=86400"})
+
     async def index(_):
         return FileResponse(STATIC / "index.html", headers={"Cache-Control": "no-cache"})
 
@@ -290,6 +310,7 @@ def build_app(cfg: dict) -> Starlette:
             Route("/api/weather/source", weather_source_ep, methods=["GET", "POST"]),
             Route("/api/night", night_ep, methods=["GET", "POST"]),
             Route("/api/prefs", prefs_ep, methods=["GET", "POST"]),
+            Route("/api/qr", qr_ep),
             Route("/api/lan", lan_ep),
             Route("/api/internet", internet_ep),
             Route("/api/news", news_ep),

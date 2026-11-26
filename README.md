@@ -52,7 +52,9 @@ the back. Two tabs: **categories** (click to add/remove, the numbers are the rot
 words, any case). Without a keyboard, click the suggested words taken from the story on the tile
 (its topic, place and the names in its headline); with one (e.g. the page opened on a phone), type
 any keyword. Filtering happens per request on the server, before the 12-per-category cut, so hidden
-stories are replaced by the next ones. Save; cancel, a second
+stories are replaced by the next ones. A third tab, **display**, turns on a discreet QR code in
+the tile's corner with the story's link (its first source article; Kagi's feed has no page per
+story). The code is made by the server (`/api/qr`, `segno`), so no outside service sees it. Save; cancel, a second
 right-click or a click outside turns it back unchanged. **Right-click either weather tile** to choose
 hourly or 3-hourly columns for the next hours (3-hourly: 8 periods = 24 h, aligned to 00/03/06…,
 built from the hourly data: average temperature, total mm or highest chance, the wettest hour's

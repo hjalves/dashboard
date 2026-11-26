@@ -2,7 +2,7 @@
 import { $, esc, getJSON, postJSON, poll, swapIn, MIN } from "../core.js";
 import { showBack, hideBack, isBack, onRightClick } from "../backs.js";
 
-const news = { stories: [], i: -1, timer: 0, seq: 0 };
+const news = { stories: [], i: -1, timer: 0, seq: 0, qr: false };
 const picker = { available: [], selected: [], filters: [], suggest: [], tab: "cats", hidden: 0 };
 
 async function loadNews() {
@@ -37,6 +37,7 @@ function nextStory() {
     setTimeout(() => { img.style.backgroundImage = s.image ? `url("${s.image}")` : "none"; img.style.opacity = s.image ? 1 : 0; }, 400);
     // Kagi publishes once a day: the edition date says how fresh the stories are.
     const ed = s.edition ? new Date(s.edition * 1000).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "";
+    showQr(s);
     $("news-cat").innerHTML = esc(s.cat) + (ed ? `<span class="edition"> · Kagi, ${esc(ed)}</span>` : "");
     $("news-dots").innerHTML = Array.from({ length: s.total }, (_, k) => `<i class="${k === s.k ? "on" : ""}"></i>`).join("");
     news.timer = setTimeout(nextStory, 14000);
@@ -79,12 +80,31 @@ function suggestions(s) {
   return out.slice(0, 14);
 }
 
+/* Option: a QR code for the story's link (its first source article), made by our server. */
+function showQr(s) {
+  const img = $("news-qr");
+  if (news.qr && s && s.link) {
+    img.src = "/api/qr?text=" + encodeURIComponent(s.link);
+    img.title = s.link;
+    img.hidden = false;
+  } else {
+    img.hidden = true;
+  }
+}
+
+function renderDisplay() {
+  $("d-qr").innerHTML = [["off", false], ["on", true]]
+    .map(([t, v]) => `<span class="chip${news.qr === v ? " on" : ""}" data-qr="${v}">${t}</span>`).join("");
+  $("picker-sub").textContent = "how the tile looks";
+}
+
 function setTab(tab) {
   picker.tab = tab;
   document.querySelectorAll("#news-pivot span").forEach((el) => el.classList.toggle("on", el.dataset.tab === tab));
   $("picker-grid").hidden = tab !== "cats";
   $("filters-pane").hidden = tab !== "filters";
-  if (tab === "cats") renderPicker(); else renderFilters();
+  $("display-pane").hidden = tab !== "display";
+  if (tab === "cats") renderPicker(); else if (tab === "filters") renderFilters(); else renderDisplay();
 }
 
 function renderFilters() {
@@ -128,6 +148,20 @@ export function initNews(scene) {
     if (k >= 0) picker.selected.splice(k, 1); else picker.selected.push(c);
     renderPicker();
   });
+  $("d-qr").addEventListener("click", async (e) => {
+    const c = e.target.closest("[data-qr]");
+    if (!c) return;
+    const on = c.dataset.qr === "true";
+    try {
+      await postJSON("/api/prefs", { news_qr: on });
+      news.qr = on;
+      renderDisplay();
+      showQr(news.stories[news.i]);
+    } catch (err) {
+      $("picker-msg").textContent = "not changed: " + err.message;
+    }
+  });
+  getJSON("/api/prefs").then((p) => { news.qr = !!p.news_qr; showQr(news.stories[news.i]); }).catch(() => {});
   $("news-pivot").addEventListener("click", (e) => { const t = e.target.closest("[data-tab]"); if (t) setTab(t.dataset.tab); });
   $("f-current").addEventListener("click", (e) => {
     const c = e.target.closest("[data-k]");

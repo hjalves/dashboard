@@ -32,6 +32,14 @@ document.addEventListener("mousemove", () => {
 });
 document.body.classList.add("idle");
 
+/* Remote control (POST /api/control, e.g. tools/snapshot.py): the server pushes commands here. */
+new EventSource("/api/events").onmessage = (e) => {
+  try {
+    const cmd = JSON.parse(e.data);
+    if (cmd.scene) goToScene(cmd.scene);
+  } catch (err) { console.warn("bad control message", err); }
+};
+
 /* Health: playback stats for /api/stats. */
 const started = Date.now();
 function reportStats() {
@@ -39,6 +47,7 @@ function reportStats() {
   const level = tv.hls && tv.hls.levels[tv.hls.currentLevel];
   const body = {
     ua: navigator.userAgent, uptime: Math.round((Date.now() - started) / 1000), scene: activeScene(),
+    viewport: { width: innerWidth, height: innerHeight, screen_height: screen.height },
     video: { width: v.videoWidth, height: v.videoHeight, time: v.currentTime, paused: v.paused, muted: v.muted, suspended: tv.suspended,
       total_frames: q.totalVideoFrames, dropped_frames: q.droppedVideoFrames,
       bitrate: level ? level.bitrate : null, codecs: level ? level.videoCodec : null },

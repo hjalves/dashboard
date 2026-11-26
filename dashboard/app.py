@@ -10,6 +10,7 @@ import re
 from datetime import datetime, timezone
 from urllib.parse import urlencode, urljoin, urlsplit
 import hashlib
+import json
 import logging
 import time
 from pathlib import Path
@@ -367,6 +368,41 @@ def build_app(cfg: dict) -> Starlette:
             qr_cache[text] = qr_svg(text)
         return Response(qr_cache[text], media_type="image/svg+xml", headers={"Cache-Control": "max-age=86400"})
 
+    # Remote control for open pages (e.g. tools/snapshot.py switching scenes): pages listen on
+    # /api/events (server-sent events); POST /api/control pushes a command to all of them.
+    listeners: set[asyncio.Queue] = set()
+
+    async def events_ep(req):
+        q: asyncio.Queue = asyncio.Queue(maxsize=20)
+        listeners.add(q)
+
+        async def stream():
+            try:
+                yield "retry: 5000\n\n"
+                while True:
+                    try:
+                        msg = await asyncio.wait_for(q.get(), timeout=25)
+                        yield f"data: {json.dumps(msg)}\n\n"
+                    except asyncio.TimeoutError:
+                        yield ": keep-alive\n\n"
+                    if await req.is_disconnected():
+                        break
+            finally:
+                listeners.discard(q)
+
+        return StreamingResponse(stream(), media_type="text/event-stream", headers={"Cache-Control": "no-cache"})
+
+    async def control_ep(req):
+        if not csrf_ok(req):
+            return JSONResponse({"error": "missing X-Dashboard header"}, status_code=403)
+        body = await req.json()
+        if not isinstance(body.get("scene"), str):
+            return JSONResponse({"error": "expected {\"scene\": name}"}, status_code=400)
+        for q in list(listeners):
+            with contextlib.suppress(asyncio.QueueFull):
+                q.put_nowait({"scene": body["scene"]})
+        return JSONResponse({"sent_to": len(listeners)})
+
     async def index(_):
         return FileResponse(STATIC / "index.html", headers={"Cache-Control": "no-cache"})
 
@@ -389,6 +425,8 @@ def build_app(cfg: dict) -> Starlette:
             Route("/api/weather/source", weather_source_ep, methods=["GET", "POST"]),
             Route("/api/night", night_ep, methods=["GET", "POST"]),
             Route("/api/prefs", prefs_ep, methods=["GET", "POST"]),
+            Route("/api/events", events_ep),
+            Route("/api/control", control_ep, methods=["POST"]),
             Route("/api/qr", qr_ep),
             Route("/api/lan", lan_ep),
             Route("/api/internet", internet_ep),
@@ -412,7 +450,8 @@ def main():
     logging.getLogger("httpx").setLevel(logging.WARNING)
     cfg = config.load()
     uvicorn.run(build_app(cfg), host=cfg["listen"]["host"], port=int(cfg["listen"]["port"]),
-                log_level="warning", proxy_headers=False)
+                log_level="warning", proxy_headers=False,
+                timeout_graceful_shutdown=3)  # open /api/events streams mustn't stall restarts
 
 
 if __name__ == "__main__":

@@ -34,7 +34,11 @@ function nextStory() {
       <h2>${esc(s.title)}</h2><p>${esc(s.summary)}</p>`);
     const img = $("news-img");
     img.style.opacity = 0;
-    setTimeout(() => { img.style.backgroundImage = s.image ? `url("${s.image}")` : "none"; img.style.opacity = s.image ? 1 : 0; }, 400);
+    setTimeout(() => {
+      img.style.backgroundImage = s.image ? `url("${s.image}")` : "none";
+      img.style.opacity = s.image ? 1 : 0;
+      $("qr-glass").style.backgroundImage = img.style.backgroundImage;
+    }, 400);
     // Kagi publishes once a day: the edition date says how fresh the stories are.
     const ed = s.edition ? new Date(s.edition * 1000).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "";
     showQr(s);
@@ -89,9 +93,19 @@ function showQr(s) {
     img.src = "/api/qr?text=" + encodeURIComponent(url);
     img.title = url;
     $("news-qr-wrap").hidden = false;
+    alignGlass();
   } else {
     $("news-qr-wrap").hidden = true;
   }
+}
+
+/* The QR card's glass is a copy of the tile photo, the size of the tile and shifted so it lines up
+   with the photo behind the card. */
+function alignGlass() {
+  const wrap = $("news-qr-wrap"), glass = $("qr-glass"), tile = $("news");
+  if (wrap.hidden) return;
+  const w = wrap.getBoundingClientRect(), t = tile.getBoundingClientRect();
+  Object.assign(glass.style, { left: t.left - w.left + "px", top: t.top - w.top + "px", width: t.width + "px", height: t.height + "px" });
 }
 
 function renderDisplay() {
@@ -158,6 +172,7 @@ export function initNews(scene) {
     renderDisplay();
   });
   getJSON("/api/prefs").then((p) => { news.qr = !!p.news_qr; showQr(news.stories[news.i]); }).catch(() => {});
+  window.addEventListener("resize", alignGlass);
   $("news-pivot").addEventListener("click", (e) => { const t = e.target.closest("[data-tab]"); if (t) setTab(t.dataset.tab); });
   $("f-current").addEventListener("click", (e) => {
     const c = e.target.closest("[data-k]");

@@ -169,15 +169,20 @@ body.idle .tv-mute:not(.on) { opacity: 0; }
 .story p { margin: 1.4rem 0 0; font-size: 1.9rem; line-height: 1.4; color: var(--ink-2);
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 /* Discreet QR code for the story's link (option): top-right, away from the text at the bottom.
-   "Photo-tinted glass": the photo behind is blurred, brightened and saturated, under a light white
-   wash; the dots multiply into it, so each story's colours tint the card. The image is shown at its
-   natural size (whole pixels per module, set by the server). Scanned fine on 8 photos (zbarimg,
-   100% and 75%), including a near-black one. */
-.news-qr-wrap { position: absolute; top: 2rem; right: 2rem; line-height: 0;
-  background: rgba(255, 255, 255, .28); backdrop-filter: blur(12px) brightness(1.6) saturate(1.6);
+   "Photo-tinted glass": the card holds its own copy of the story photo, lined up with the photo
+   behind it (app.js sets its offset) and blurred, brightened and saturated with ordinary CSS
+   filters, under a light white wash; the dots multiply into it, so each story's colours tint the
+   card. Not backdrop-filter: Firefox doesn't render that reliably here. The code is shown at its
+   natural size (whole pixels per module, set by the server). Scanned on 8 photos (zbarimg, 100% and
+   75%), including a near-black one. */
+.news-qr-wrap { position: absolute; top: 2rem; right: 2rem; line-height: 0; overflow: hidden; isolation: isolate;
+  background: #4b2a7b;  /* under the glass: where the blur fades at the tile edge, no sharp photo shows */
   box-shadow: 0 .4rem 1.6rem rgba(0, 0, 0, .35); }
 .news-qr-wrap[hidden] { display: none; }
-.news-qr { display: block; mix-blend-mode: multiply; opacity: .92; }
+.qr-glass { position: absolute; background: #3b2466 center / cover no-repeat;
+  filter: blur(12px) brightness(1.6) saturate(1.6); }
+.qr-wash { position: absolute; inset: 0; background: rgba(255, 255, 255, .28); }
+.news-qr { position: relative; display: block; mix-blend-mode: multiply; opacity: .92; }
 .nb-label.qr-label { width: auto; margin-right: 1rem; }
 .f-hint.qr-hint { margin: .6rem 0 0; }
 #d-qr .chip { line-height: 4rem; }

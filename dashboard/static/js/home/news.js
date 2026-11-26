@@ -88,9 +88,9 @@ function showQr(s) {
   if (news.qr && url) {
     img.src = "/api/qr?text=" + encodeURIComponent(url);
     img.title = url;
-    img.hidden = false;
+    $("news-qr-wrap").hidden = false;
   } else {
-    img.hidden = true;
+    $("news-qr-wrap").hidden = true;
   }
 }
 

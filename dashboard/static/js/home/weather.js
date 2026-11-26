@@ -5,6 +5,7 @@ import { showBack, hideBack, onRightClick } from "../backs.js";
 import { weatherIcon } from "../icons.js";
 
 let forecast = null;
+let useStation = true;  // preference: the router's weather station for "now", or the forecast
 let step = 1;  // hours per chart column: 1 or 3 (preference, chosen on the tiles' back)
 
 const isWet = (h) => (h.rain_mm !== undefined ? h.rain_mm > 0 : h.rain_prob >= 30);
@@ -44,7 +45,8 @@ function threeHourly(hourly) {
 
 export async function loadWeather() {
   const w = await getJSON("/api/weather");
-  const f = w.forecast.data, st = w.station && w.station.data;
+  const f = w.forecast.data, st = w.station_enabled !== false && w.station && w.station.data;
+  $("w-src").textContent = st ? "· station" : "· forecast";
   forecast = f;
   const first = f && f.hourly[0];
   const today = f && f.daily.find((d) => d.date === new Date().toLocaleDateString("sv-SE"));
@@ -68,11 +70,18 @@ export async function loadWeather() {
     if (st.hum != null) facts.push(`<span>humidity <b>${st.hum}%</b></span>`);
     if (st.wind_kmh != null) facts.push(`<span>wind <b>${Math.round(st.wind_kmh)}</b> km/h</span>`);
     if (st.today_rain) facts.push(`<span>rain today <b>${st.today_rain}</b> mm</span>`);
+  } else if (first) {
+    // Station off: the forecast's current hour.
+    if (first.hum != null) facts.push(`<span>humidity <b>${Math.round(first.hum)}%</b></span>`);
+    if (first.wind_kmh != null) facts.push(`<span>wind <b>${Math.round(first.wind_kmh)}</b> km/h</span>`);
+    if (first.rain_mm) facts.push(`<span>rain this hour <b>${fmtMM(first.rain_mm)}</b> mm</span>`);
+    else if (first.rain_prob >= 30) facts.push(`<span>rain chance <b>${Math.round(first.rain_prob)}%</b></span>`);
   }
   $("w-facts").innerHTML = facts.join("");
 
   const stationAge = st ? (Date.now() / 1000 - st.time) : null;
   $("w-stale").textContent = !w.forecast.ok ? "forecast offline"
+    : !useStation ? ""
     : stationAge != null && stationAge > 900 ? "station " + ago(st.time * 1000)
     : w.station && !w.station.ok ? "station offline" : "";
   $("w-where").textContent = f && f.location ? "· " + f.location : "";
@@ -170,20 +179,43 @@ const SOURCE_BACK = `<div class="back-title">forecast</div>
     <div class="src" data-src="ipma"><div class="src-name">IPMA</div>
       <div class="src-desc">rain chance · Portugal's weather service</div></div>
   </div>
-  <div class="picker-foot step-row"><span class="nb-label">next hours</span><span class="nb-opts step-opts">
-    <span class="chip" data-step="1">hourly</span><span class="chip" data-step="3">3-hourly</span></span>
+  <div class="picker-foot step-row"><span class="opt-row"></span>
     <span class="picker-msg"></span><button class="btn">done</button></div>`;
+
+/* The option row differs per tile: "now" chooses the station, the forecast tile the column width. */
+const OPT_ROWS = {
+  "weather-now": `<span class="nb-label">station</span><span class="nb-opts step-opts">
+    <span class="chip" data-station="true">on</span><span class="chip" data-station="false">off</span></span>`,
+  "weather-hourly": `<span class="nb-label">next hours</span><span class="nb-opts step-opts">
+    <span class="chip" data-step="1">hourly</span><span class="chip" data-step="3">3-hourly</span></span>`,
+};
 
 function showStep(back) {
   back.querySelectorAll("[data-step]").forEach((el) => el.classList.toggle("on", +el.dataset.step === step));
+  back.querySelectorAll("[data-station]").forEach((el) => el.classList.toggle("on", (el.dataset.station === "true") === useStation));
 }
 
 export function initWeather(scene) {
   document.querySelectorAll(".src-back").forEach((back) => {
     back.innerHTML = SOURCE_BACK;
     const tile = back.closest(".tile"), msg = back.querySelector(".picker-msg");
+    back.querySelector(".opt-row").outerHTML = OPT_ROWS[tile.id] || "";
+    if (tile.id === "weather-now") back.querySelector(".back-title").textContent = "weather";
     back.querySelector(".btn").addEventListener("click", hideBack);
     back.addEventListener("click", async (e) => {
+      const sta = e.target.closest("[data-station]");
+      if (sta) {
+        try {
+          const on = sta.dataset.station === "true";
+          await postJSON("/api/prefs", { weather_station: on });
+          useStation = on;
+          document.querySelectorAll(".src-back").forEach(showStep);
+          await loadWeather();
+        } catch (err) {
+          msg.textContent = "not changed: " + err.message;
+        }
+        return;
+      }
       const st = e.target.closest("[data-step]");
       if (st) {
         try {
@@ -220,6 +252,10 @@ export function initWeather(scene) {
     });
   });
   window.addEventListener("resize", drawChart);
-  getJSON("/api/prefs").then((p) => { step = p.forecast_step === 3 ? 3 : 1; drawChart(); }).catch(() => {});
+  getJSON("/api/prefs").then((p) => {
+    step = p.forecast_step === 3 ? 3 : 1;
+    useStation = p.weather_station !== false;
+    drawChart();
+  }).catch(() => {});
   poll(loadWeather, 2 * MIN, scene);
 }

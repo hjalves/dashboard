@@ -61,7 +61,10 @@ blurred, brightened copy of the story photo under a light wash, and the dots `mu
 plain CSS filters, because Firefox doesn't render `backdrop-filter` reliably here), 4 screen pixels per module so the gaps are
 whole pixels), so no outside service sees it. The slug is cut to two words to keep the code
 small; Kagi finds the story by the number anyway. Save; cancel, a second
-right-click or a click outside turns it back unchanged. **Right-click either weather tile** to choose
+right-click or a click outside turns it back unchanged. **Right-click either weather tile** to choose the forecast source. On the "now" tile's back you can
+also turn the router's weather station off: "now" then shows the forecast's current hour
+(temperature, humidity, wind, rain this hour) and the server stops querying the station; the label
+says which ("weather · station" / "weather · forecast"). On the forecast tile's back choose
 hourly or 3-hourly columns for the next hours (3-hourly: 8 periods = 24 h, aligned to 00/03/06…,
 built from the hourly data: average temperature, total mm or highest chance, the wettest hour's
 symbol if any rain, else the middle hour's) and the forecast source, MET Norway or IPMA (click one to switch). These choices are stored in

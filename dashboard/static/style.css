@@ -237,7 +237,6 @@ body.idle .tv-mute:not(.on) { opacity: 0; }
 .step-row .chip { line-height: 3.6rem; }
 .step-row .nb-label { width: auto; margin-right: .4rem; }
 .step-row .nb-opts { flex-wrap: nowrap; }
-.weather-now .step-row .nb-label { display: none; }
 .weather-now .step-row .btn { min-width: 0; padding: .6rem 2rem; }
 .src-back .step-row .chip.on { background: #1a73c9; }
 .src-back { gap: 1.2rem; }

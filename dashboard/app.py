@@ -121,8 +121,10 @@ def build_app(cfg: dict) -> Starlette:
     epg = Cached("epg", 6 * 3600, epg_fetch, retry=900)
 
     async def weather(_):
-        parts = await asyncio.gather(forecast.get(), station.get() if station else asyncio.sleep(0, None))
-        return JSONResponse({"forecast": parts[0], "station": parts[1]})
+        # With the station turned off (right-click the "now" tile) it isn't even queried.
+        use_station = station is not None and prefs()["weather_station"]
+        parts = await asyncio.gather(forecast.get(), station.get() if use_station else asyncio.sleep(0, None))
+        return JSONResponse({"forecast": parts[0], "station": parts[1], "station_enabled": use_station})
 
     async def lan_ep(_):
         return JSONResponse(await lan.get())
@@ -176,7 +178,7 @@ def build_app(cfg: dict) -> Starlette:
     # Simple display preferences changed from the page (right-click), with their types and defaults.
     # name: (type, default, allowed values or None)
     PREFS = {"clock_seconds": (bool, False, None), "forecast_step": (int, 1, (1, 3)),
-             "news_qr": (bool, False, None)}
+             "news_qr": (bool, False, None), "weather_station": (bool, True, None)}
 
     def prefs() -> dict:
         saved = state.get("prefs", {})

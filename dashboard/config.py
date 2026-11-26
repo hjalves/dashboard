@@ -18,7 +18,7 @@ DEFAULTS = {
         "longitude": -7.9229,
         # IPMA globalIdLocal, for source = "ipma" (https://api.ipma.pt/public-data/forecast/locations.json)
         "ipma_location": 1050800,  # Proença-a-Nova
-        "hours": 24,
+        "hours": 30,  # enough for 8 three-hour columns
         # Router's ubus endpoint for weatherd (anonymous read). Empty disables the station.
         "station_ubus": "http://192.168.0.254/ubus",
     },

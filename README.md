@@ -54,7 +54,9 @@ words, any case). Without a keyboard, click the suggested words taken from the s
 any keyword. Filtering happens per request on the server, before the 12-per-category cut, so hidden
 stories are replaced by the next ones. Save; cancel, a second
 right-click or a click outside turns it back unchanged. **Right-click either weather tile** to choose
-the forecast source, MET Norway or IPMA (click one to switch). These choices are stored in
+hourly or 3-hourly columns for the next hours (3-hourly: 8 periods = 24 h, aligned to 00/03/06…,
+built from the hourly data: average temperature, total mm or highest chance, the wettest hour's
+symbol if any rain, else the middle hour's) and the forecast source, MET Norway or IPMA (click one to switch). These choices are stored in
 `~/.local/state/dashboard/state.json` and override `[news] categories` and `[weather] source` in
 config.toml (delete the file to go back to the config). Saving
 needs the `X-Dashboard: 1` header, so other web pages can't change it. **Right-click the clock** to turn seconds on or off (shown smaller after HH:MM; saved as a

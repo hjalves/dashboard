@@ -5,6 +5,42 @@ import { showBack, hideBack, onRightClick } from "../backs.js";
 import { weatherIcon } from "../icons.js";
 
 let forecast = null;
+let step = 1;  // hours per chart column: 1 or 3 (preference, chosen on the tiles' back)
+
+const isWet = (h) => (h.rain_mm !== undefined ? h.rain_mm > 0 : h.rain_prob >= 30);
+const wetness = (h) => (h.rain_mm !== undefined ? h.rain_mm || 0 : h.rain_prob || 0);
+
+/* Three-hour periods aligned to the clock (00, 03, 06 …), built from the hourly forecast:
+   average temperature, total rain (mm) or the highest chance, the wettest hour's symbol if any
+   rain is expected (else the middle hour's), and day/night from the middle hour. */
+function threeHourly(hourly) {
+  const groups = new Map();
+  for (const h of hourly) {
+    const t = new Date(h.time);
+    const start = new Date(t);
+    start.setHours(t.getHours() - (t.getHours() % 3), 0, 0, 0);
+    const key = start.getTime();
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(h);
+  }
+  return [...groups.entries()].map(([key, hs]) => {
+    const mid = hs[Math.floor(hs.length / 2)];
+    const wet = hs.filter(isWet);
+    const rep = wet.length ? wet.reduce((a, b) => (wetness(b) > wetness(a) ? b : a)) : mid;
+    const temps = hs.map((h) => h.temp).filter((v) => v != null);
+    const mm = hs.map((h) => h.rain_mm).filter((v) => v != null);
+    const probs = hs.map((h) => h.rain_prob).filter((v) => v != null);
+    const g = {
+      time: new Date(key).toISOString(), span: 3,
+      temp: temps.length ? temps.reduce((a, b) => a + b, 0) / temps.length : null,
+      symbol: rep.symbol, type: rep.type, desc: rep.desc, day: mid.day,
+      wind_kmh: Math.max(...hs.map((h) => h.wind_kmh ?? 0)),
+    };
+    if (hs[0].rain_mm !== undefined) g.rain_mm = mm.length ? Math.round(mm.reduce((a, b) => a + b, 0) * 10) / 10 : null;
+    else g.rain_prob = probs.length ? Math.max(...probs) : null;
+    return g;
+  });
+}
 
 export async function loadWeather() {
   const w = await getJSON("/api/weather");
@@ -68,8 +104,9 @@ export function drawChart() {
   const svg = $("w-chart");
   if (!forecast || !svg.clientWidth) return;
   const W = svg.clientWidth, H = svg.clientHeight;
-  const n = Math.max(4, Math.min(forecast.hourly.length, Math.floor(W / 62)));
-  const hrs = forecast.hourly.slice(0, n);
+  const series = step === 3 ? threeHourly(forecast.hourly) : forecast.hourly;
+  const n = Math.max(4, Math.min(series.length, Math.floor(W / 62)));
+  const hrs = series.slice(0, n);
   const col = W / n;
   const x = (i) => col * i + col / 2;
 
@@ -106,7 +143,7 @@ export function drawChart() {
     out += `<rect class="base" x="${x(i) - bw / 2}" y="${rainBot - 1}" width="${bw}" height="1"/>`;
     // Rain: MET Norway amounts (full bar = 4 mm/h, labelled from 0.2 mm), or IPMA probability.
     const mmode = h.rain_mm !== undefined;
-    const frac = mmode ? Math.min(1, (h.rain_mm || 0) / 4) : (h.rain_prob || 0) / 100;
+    const frac = mmode ? Math.min(1, (h.rain_mm || 0) / (4 * (h.span || 1))) : (h.rain_prob || 0) / 100;
     if (frac > 0) {
       const ph = Math.max(2, frac * bh);
       out += `<rect class="bar" x="${x(i) - bw / 2}" y="${rainBot - ph}" width="${bw}" height="${ph}" rx="2"/>`;
@@ -115,23 +152,31 @@ export function drawChart() {
     }
     out += `<text class="hour" x="${x(i)}" y="${hourY}" text-anchor="middle">${String(t.getHours()).padStart(2, "0")}</text>`;
     const rainTxt = h.rain_mm !== undefined ? `${h.rain_mm ?? "?"} mm` : `${h.rain_prob ?? "?"}%`;
-    const tip = `${hhmm(t)} · ${h.temp != null ? Math.round(h.temp) + "°" : "--"} · ${h.desc || ""} · rain ${rainTxt} · wind ${h.wind_kmh ?? "?"} km/h`;
+    const when = h.span ? `${hhmm(t)}–${hhmm(t.getTime() + h.span * 3600e3)}` : hhmm(t);
+    const tip = `${when} · ${h.temp != null ? Math.round(h.temp) + "°" : "--"} · ${h.desc || ""} · rain ${rainTxt} · wind ${h.wind_kmh ?? "?"} km/h`;
     out += `<rect x="${col * i}" y="0" width="${col}" height="${H}" fill="transparent"><title>${esc(tip)}</title></rect>`;
   });
   svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
   svg.innerHTML = out;
+  $("w-span").textContent = step === 3 ? `next ${n * 3} hours` : "next hours";
   $("w-hicons").innerHTML = hrs.map((h, i) =>
     weatherIcon(h.symbol ?? h.type, h.day).replace('style="', `style="left:${x(i)}px;top:${iconTop}px;`)).join("");
 }
 
-const SOURCE_BACK = `<div class="back-title">forecast source</div>
+const SOURCE_BACK = `<div class="back-title">forecast</div>
   <div class="src-options">
     <div class="src" data-src="metno"><div class="src-name">MET Norway</div>
-      <div class="src-desc">rain in mm · hourly for about 2½ days · Norwegian Meteorological Institute</div></div>
+      <div class="src-desc">rain in mm · Norwegian Meteorological Institute</div></div>
     <div class="src" data-src="ipma"><div class="src-name">IPMA</div>
-      <div class="src-desc">rain chance · hourly for about 3 days · Portugal's national weather service</div></div>
+      <div class="src-desc">rain chance · Portugal's weather service</div></div>
   </div>
-  <div class="picker-foot"><span class="picker-msg"></span><button class="btn">cancel</button></div>`;
+  <div class="picker-foot step-row"><span class="nb-label">next hours</span><span class="nb-opts step-opts">
+    <span class="chip" data-step="1">hourly</span><span class="chip" data-step="3">3-hourly</span></span>
+    <span class="picker-msg"></span><button class="btn">done</button></div>`;
+
+function showStep(back) {
+  back.querySelectorAll("[data-step]").forEach((el) => el.classList.toggle("on", +el.dataset.step === step));
+}
 
 export function initWeather(scene) {
   document.querySelectorAll(".src-back").forEach((back) => {
@@ -139,6 +184,18 @@ export function initWeather(scene) {
     const tile = back.closest(".tile"), msg = back.querySelector(".picker-msg");
     back.querySelector(".btn").addEventListener("click", hideBack);
     back.addEventListener("click", async (e) => {
+      const st = e.target.closest("[data-step]");
+      if (st) {
+        try {
+          await postJSON("/api/prefs", { forecast_step: +st.dataset.step });
+          step = +st.dataset.step;
+          document.querySelectorAll(".src-back").forEach(showStep);
+          drawChart();
+        } catch (err) {
+          msg.textContent = "not changed: " + err.message;
+        }
+        return;
+      }
       const opt = e.target.closest(".src");
       if (!opt) return;
       msg.textContent = "switching…";
@@ -152,6 +209,7 @@ export function initWeather(scene) {
     });
     onRightClick(tile, async () => {
       msg.textContent = "";
+      showStep(back);
       showBack(tile);
       try {
         const r = await getJSON("/api/weather/source");
@@ -162,5 +220,6 @@ export function initWeather(scene) {
     });
   });
   window.addEventListener("resize", drawChart);
+  getJSON("/api/prefs").then((p) => { step = p.forecast_step === 3 ? 3 : 1; drawChart(); }).catch(() => {});
   poll(loadWeather, 2 * MIN, scene);
 }

@@ -173,18 +173,25 @@ def build_app(cfg: dict) -> Starlette:
         return JSONResponse({"source": weather_source(), "available": list(SOURCES)})
 
     # Simple display preferences changed from the page (right-click), with their types and defaults.
-    PREFS = {"clock_seconds": (bool, False)}
+    # name: (type, default, allowed values or None)
+    PREFS = {"clock_seconds": (bool, False, None), "forecast_step": (int, 1, (1, 3))}
 
     def prefs() -> dict:
         saved = state.get("prefs", {})
-        return {k: saved.get(k, default) for k, (_, default) in PREFS.items()}
+        return {k: saved.get(k, default) for k, (_, default, _) in PREFS.items()}
+
+    def pref_ok(k, v) -> bool:
+        if k not in PREFS:
+            return False
+        typ, _, allowed = PREFS[k]
+        return type(v) is typ and (allowed is None or v in allowed)
 
     async def prefs_ep(req):
         if req.method == "POST":
             if not csrf_ok(req):
                 return JSONResponse({"error": "missing X-Dashboard header"}, status_code=403)
             body = await req.json()
-            bad = [k for k, v in body.items() if k not in PREFS or not isinstance(v, PREFS[k][0])]
+            bad = [k for k, v in body.items() if not pref_ok(k, v)]
             if bad or not body:
                 return JSONResponse({"error": f"unknown or mistyped preferences: {bad}"}, status_code=400)
             state["prefs"] = {**state.get("prefs", {}), **body}

@@ -32,10 +32,14 @@ export const hhmm = (t) => new Date(t).toLocaleTimeString("en-GB", { hour: "2-di
 export const deg = (v) => (v == null ? "--" : Math.round(v)) + "°";
 export const fmtMM = (v) => (v === 0 ? "0" : v >= 10 ? String(Math.round(v)) : v.toFixed(1));
 
-/* Live-tile swap: the old child slides up and out, the new one slides in from below. */
+/* Live-tile swap: whatever is there slides up and out, the new content slides in from below.
+   Every older child goes, even if several swaps overlap (fast clicks). */
 export function swapIn(container, cls, html) {
-  const old = container.firstElementChild;
-  if (old) { old.classList.add("leave"); setTimeout(() => old.remove(), 700); }
+  for (const old of [...container.children]) {
+    if (old.classList.contains("leave")) continue;
+    old.classList.add("leave");
+    setTimeout(() => old.remove(), 700);
+  }
   const el = document.createElement("div");
   el.className = cls + " enter";
   el.innerHTML = html;

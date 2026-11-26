@@ -2,7 +2,7 @@
 import { $, esc, getJSON, postJSON, poll, swapIn, MIN } from "../core.js";
 import { showBack, hideBack, isBack, onRightClick } from "../backs.js";
 
-const news = { stories: [], i: -1, timer: 0 };
+const news = { stories: [], i: -1, timer: 0, seq: 0 };
 const picker = { available: [], selected: [], filters: [], suggest: [], tab: "cats", hidden: 0 };
 
 async function loadNews() {
@@ -27,7 +27,9 @@ function nextStory() {
   if (!news.stories.length) return;
   news.i = (news.i + 1) % news.stories.length;
   const s = news.stories[news.i];
+  const seq = ++news.seq;
   const show = () => {
+    if (seq !== news.seq) return;  // a newer click won while this picture was loading
     swapIn($("news-body"), "story", `<div class="meta">${s.emoji ? `<span class="emoji">${esc(s.emoji)}</span>` : ""}${esc(s.topic || "")}${s.location ? " · " + esc(s.location) : ""}${s.sources ? " · " + s.sources + " sources" : ""}</div>
       <h2>${esc(s.title)}</h2><p>${esc(s.summary)}</p>`);
     const img = $("news-img");

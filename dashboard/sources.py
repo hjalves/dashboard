@@ -130,6 +130,7 @@ async def fetch_station(url: str) -> dict:
         "time": latest["time"],
         "temp": sc(latest.get("temp"), 0.1),
         "temp_in": sc(latest.get("temp_in"), 0.1),
+        "hum_in": latest.get("hum_in"),
         "hum": latest.get("hum"),
         "press": sc(latest.get("press"), 0.1),
         "wind_kmh": sc(latest.get("wind"), 0.36),

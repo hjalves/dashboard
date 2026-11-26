@@ -76,6 +76,8 @@ export async function loadWeather() {
       const tip = d == null ? "" : ` title="${d > 0 ? "+" : ""}${d} hPa in 3 h"`;
       facts.push(`<span${tip}><b>${Math.round(st.press)}</b> hPa${arrow}</span>`);
     }
+    // The console's own sensor, indoors: fixed slot before UV (which hides at night).
+    if (st.temp_in != null) facts.push(`<span>inside <b>${deg(st.temp_in)}</b>${st.hum_in != null ? ` · <b>${st.hum_in}%</b>` : ""}</span>`);
     if (st.uv != null && f && isDaytime(f)) facts.push(`<span>UV <b>${st.uv}</b></span>`);
   } else if (first) {
     // Station off: the forecast's current hour.

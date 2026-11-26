@@ -3,6 +3,16 @@
 Screenshots of the dashboard on asus-arch's monitor as it changes, newest first.
 Taken with `tools/snapshot.py`.
 
+## 2026-11-26 · `150260f Agenda: show or hide calendars (right-click)`
+
+- Agenda tile (bottom right) in place of two GitHub tiles: Google Calendar (Main, Events,
+  Portuguese holidays) and the Anime release calendar, upcoming 14 days grouped by day, a colour
+  per calendar; right-click to show or hide calendars. GitHub now shows two repos.
+
+![home](2026-11-26-home-2.jpg)
+![network](2026-11-26-network-2.jpg)
+![night](2026-11-26-night-2.jpg)
+
 ## 2026-11-26 · `8a91b22 Remote control channel (/api/events + /api/control) and devlog snapshots (tools/snapshot.py)`
 
 - Since the first version: scenes (home, network, night) switched by the titles at the top or the

@@ -297,6 +297,39 @@ body.idle .tv-mute:not(.on) { opacity: 0; }
 .dev-what { color: var(--ink-2); }
 .badge { font-size: 1.2rem; text-transform: lowercase; background: rgba(255, 255, 255, .25); padding: .1rem .6rem; margin-left: .8rem; vertical-align: .3rem; }
 
+/* ---------------------------------------------------------------- night scene */
+/* Pure black and dim grey: nothing bright on screen at night. */
+body[data-scene="night"] { background: #000; }
+body[data-scene="night"] .scene-nav span { color: #3a3a3a; }
+body[data-scene="night"] .scene-nav span.on { color: #6a6a6a; }
+.night { height: 100vh; padding: 0; background: #000; color: #8a8a8a; display: flex; align-items: center; justify-content: center; }
+.night-inner { display: flex; flex-direction: column; align-items: center; transition: transform 20s ease-in-out; }
+.nt-time { font-size: 30rem; font-weight: 300; line-height: .8; letter-spacing: -.02em; color: #9a9a9a; font-variant-numeric: tabular-nums; }
+.nt-time .colon { display: inline-block; transform: translateY(-.06em); margin: 0 .02em; }
+.nt-date { font-size: 3.4rem; font-weight: 300; margin-top: 3.4rem; color: #6c6c6c; }
+.nt-now { display: flex; align-items: center; gap: 1.6rem; margin-top: 6rem; }
+.nt-now .wi { width: 9rem; height: 9rem; }
+.nt-temp { font-size: 8rem; font-weight: 300; color: #9a9a9a; line-height: 1; }
+.nt-desc { font-size: 2.6rem; font-weight: 300; color: #6c6c6c; margin-left: 1rem; }
+.nt-hours { display: flex; gap: 3.6rem; margin-top: 4.4rem; }
+.nh { display: flex; flex-direction: column; align-items: center; width: 6rem; }
+.nh-h { font-size: 1.8rem; color: #5a5a5a; }
+.nh .wi { width: 5rem; height: 5rem; margin: .4rem 0; }
+.nh-t { font-size: 2.6rem; font-weight: 300; color: #8a8a8a; }
+.nh-r { font-size: 1.5rem; color: #5f7f9a; height: 2rem; }
+.nt-tomorrow { font-size: 2.2rem; font-weight: 300; color: #5a5a5a; margin-top: 3.6rem; }
+.night-back { background: #111 !important; color: var(--ink); max-width: 90rem; margin: auto; inset: 0; height: max-content;
+  padding: 3rem 3.4rem 2.6rem; gap: 1.8rem; }
+.tile.night.flipped > .tile-back { display: flex; position: relative; }
+.tile.night.flipped > .night-inner { display: none; }
+.nb-row { display: flex; align-items: center; gap: 1.6rem; }
+.nb-label { width: 12rem; font-size: 1.8rem; color: var(--ink-2); }
+.nb-opts { display: flex; gap: .5rem; flex-wrap: wrap; }
+.nb-opts .chip { padding: 0 1.8rem; line-height: 4.2rem; }
+.nb-opts .chip.on { background: #555; }
+.nb-opts .chip.dim { opacity: .4; }
+.night-back .btn.primary { background: #555; border-color: #555; }
+
 /* ---------------------------------------------------------------- misc */
 .fade-in { animation: fade .6s ease both; }
 @keyframes fade { from { opacity: 0; } }

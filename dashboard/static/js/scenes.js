@@ -17,6 +17,7 @@ function render(animate) {
   strip.classList.toggle("instant", !animate);
   strip.style.transform = `translateX(${-100 * current}vw)`;
   els.forEach((el, i) => el.setAttribute("aria-hidden", i !== current));
+  document.body.dataset.scene = names[current];
   $("scene-nav").innerHTML = names.map((n, i) =>
     `<span class="${i === current ? "on" : ""}" data-i="${i}">${esc(els[i].dataset.title || n)}</span>`).join("");
 }
@@ -31,6 +32,8 @@ export function goTo(i) {
   render(true);
   listeners.forEach((fn) => { fn(prev, false); fn(names[current], true); });
 }
+
+export const goToScene = (name) => { const i = names.indexOf(name); if (i >= 0) goTo(i); };
 
 $("scene-nav").addEventListener("click", (e) => {
   const t = e.target.closest("[data-i]");

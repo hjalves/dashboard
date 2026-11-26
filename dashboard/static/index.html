@@ -138,6 +138,31 @@
 </main>
 </section>
 
+<section class="scene" data-scene="night" data-title="night">
+<main class="tile night" id="night">
+  <div class="night-inner" id="night-inner">
+    <div class="nt-time"><span id="nt-hh">--</span><span class="colon">:</span><span id="nt-mm">--</span></div>
+    <div class="nt-date" id="nt-date"></div>
+    <div class="nt-now" id="nt-now"></div>
+    <div class="nt-hours" id="nt-hours"></div>
+    <div class="nt-tomorrow" id="nt-tomorrow"></div>
+  </div>
+  <!-- Back (right-click): automatic night schedule. -->
+  <div class="tile-back night-back" id="night-back">
+    <div class="back-title">night</div>
+    <div class="back-sub">switch to this screen automatically, and back to the previous one in the morning</div>
+    <div class="nb-row"><span class="nb-label">automatic</span><span class="nb-opts" id="nb-auto"></span></div>
+    <div class="nb-row"><span class="nb-label">from</span><span class="nb-opts" id="nb-start"></span></div>
+    <div class="nb-row"><span class="nb-label">until</span><span class="nb-opts" id="nb-end"></span></div>
+    <div class="picker-foot">
+      <span class="picker-msg" id="nb-msg"></span>
+      <button class="btn" id="nb-cancel">cancel</button>
+      <button class="btn primary" id="nb-save">save</button>
+    </div>
+  </div>
+</main>
+</section>
+
 </div>
 
 <script src="/static/vendor/hls.min.js"></script>

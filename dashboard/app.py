@@ -143,6 +143,24 @@ def build_app(cfg: dict) -> Starlette:
                 log.info("forecast source set to %s", src)
         return JSONResponse({"source": weather_source(), "available": list(SOURCES)})
 
+    # Night scene schedule (right-click the night scene): off by default.
+    def night_settings() -> dict:
+        return {"auto": False, "start": 23, "end": 7, **state.get("night", {})}
+
+    async def night_ep(req):
+        if req.method == "POST":
+            if not csrf_ok(req):
+                return JSONResponse({"error": "missing X-Dashboard header"}, status_code=403)
+            body = await req.json()
+            auto, start, end = body.get("auto"), body.get("start"), body.get("end")
+            if not isinstance(auto, bool) or not all(isinstance(h, int) and 0 <= h <= 23 for h in (start, end)) \
+                    or start == end:
+                return JSONResponse({"error": "need auto (bool) and two different hours 0-23"}, status_code=400)
+            state["night"] = {"auto": auto, "start": start, "end": end}
+            config.save_state(state)
+            log.info("night schedule set to %s", state["night"])
+        return JSONResponse(night_settings())
+
     async def news_categories_ep(req):
         if req.method == "POST":
             if not csrf_ok(req):
@@ -214,6 +232,7 @@ def build_app(cfg: dict) -> Starlette:
             Route("/", index),
             Route("/api/weather", weather),
             Route("/api/weather/source", weather_source_ep, methods=["GET", "POST"]),
+            Route("/api/night", night_ep, methods=["GET", "POST"]),
             Route("/api/lan", lan_ep),
             Route("/api/internet", internet_ep),
             Route("/api/news", news_ep),

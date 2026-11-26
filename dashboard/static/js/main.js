@@ -1,12 +1,13 @@
 /* Entry point: wires the scenes and their tiles together. */
 import { $, getJSON, poll, startPolling, refreshAll, catchUp, MIN } from "./core.js";
-import { activeScene, onSceneChange } from "./scenes.js";
+import { activeScene, onSceneChange, goToScene } from "./scenes.js";
 import { initClock } from "./home/clock.js";
 import { initWeather } from "./home/weather.js";
 import { initNews } from "./home/news.js";
 import { initGithub } from "./home/github.js";
 import { initTv, tv } from "./home/tv.js";
 import { initNetwork } from "./network/network.js";
+import { initNight } from "./night/night.js";
 
 initClock(() => {  // resumed from sleep
   refreshAll(activeScene());
@@ -17,6 +18,7 @@ initNews("home");
 initGithub("home", activeScene);
 initTv("home", onSceneChange);
 initNetwork("network", onSceneChange);
+initNight("night", activeScene, onSceneChange, goToScene);
 
 // A scene that comes back on screen fetches whatever it missed while hidden.
 onSceneChange((name, entering) => { if (entering) catchUp(name); });

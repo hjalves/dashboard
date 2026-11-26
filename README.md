@@ -33,7 +33,15 @@ playing.
 | | latency and traffic, last 24 h (15-min buckets) | same | 1 min |
 | | online devices, newly seen first (pages every 12 s if they don't fit) | `lanwatch` on the router (`lanwatch.devices`) | 30 s |
 
+| night | big clock, date, temperature now with icon and description, the next 8 hours, tomorrow | the same weather data as home | 5 min |
+
 No speed tests: throughput is what's being used, from the Huawei's byte counters.
+
+The **night** scene is pure black and dim grey, and drifts a few pixels every minute so nothing
+sits on the same pixels all night. Right-click it to set the automatic schedule (off by default;
+`night` in state.json): at the start hour the page switches to night, and at the end hour back to
+the scene it came from. Switching away by hand during the night is respected until the next night,
+and choosing night by hand means it isn't switched away in the morning.
 
 ## Input
 

@@ -172,6 +172,26 @@ def build_app(cfg: dict) -> Starlette:
                 log.info("forecast source set to %s", src)
         return JSONResponse({"source": weather_source(), "available": list(SOURCES)})
 
+    # Simple display preferences changed from the page (right-click), with their types and defaults.
+    PREFS = {"clock_seconds": (bool, False)}
+
+    def prefs() -> dict:
+        saved = state.get("prefs", {})
+        return {k: saved.get(k, default) for k, (_, default) in PREFS.items()}
+
+    async def prefs_ep(req):
+        if req.method == "POST":
+            if not csrf_ok(req):
+                return JSONResponse({"error": "missing X-Dashboard header"}, status_code=403)
+            body = await req.json()
+            bad = [k for k, v in body.items() if k not in PREFS or not isinstance(v, PREFS[k][0])]
+            if bad or not body:
+                return JSONResponse({"error": f"unknown or mistyped preferences: {bad}"}, status_code=400)
+            state["prefs"] = {**state.get("prefs", {}), **body}
+            config.save_state(state)
+            log.info("preferences set: %s", body)
+        return JSONResponse(prefs())
+
     # Night scene schedule (right-click the night scene): off by default.
     def night_settings() -> dict:
         return {"auto": False, "start": 23, "end": 7, **state.get("night", {})}
@@ -262,6 +282,7 @@ def build_app(cfg: dict) -> Starlette:
             Route("/api/weather", weather),
             Route("/api/weather/source", weather_source_ep, methods=["GET", "POST"]),
             Route("/api/night", night_ep, methods=["GET", "POST"]),
+            Route("/api/prefs", prefs_ep, methods=["GET", "POST"]),
             Route("/api/lan", lan_ep),
             Route("/api/internet", internet_ep),
             Route("/api/news", news_ep),

@@ -79,6 +79,11 @@ body.idle, body.idle * { cursor: none !important; }
 }
 .clock .colon { display: inline-block; margin: 0 .02em; transform: translateY(-.06em); animation: blink 2s steps(1) infinite; }
 @keyframes blink { 50% { opacity: .35; } }
+.clock.with-seconds .time { font-size: 14.5rem; }
+.clock.with-seconds .colon { animation: none; }
+.clock .secs { font-size: .4em; color: var(--ink-2); letter-spacing: 0; margin-left: .06em; }
+.clock-back { background: #1d1d1f !important; gap: 1.6rem; }
+.clock-back .nb-opts .chip.on { background: #555; }
 .clock .date { margin-top: 2.2rem; font-size: 3.2rem; font-weight: 300; color: var(--ink-2); }
 
 /* ---------------------------------------------------------------- weather */

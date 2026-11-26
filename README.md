@@ -57,7 +57,8 @@ right-click or a click outside turns it back unchanged. **Right-click either wea
 the forecast source, MET Norway or IPMA (click one to switch). These choices are stored in
 `~/.local/state/dashboard/state.json` and override `[news] categories` and `[weather] source` in
 config.toml (delete the file to go back to the config). Saving
-needs the `X-Dashboard: 1` header, so other web pages can't change it. The browser's own right-click menu is disabled everywhere. The cursor hides after 3 s.
+needs the `X-Dashboard: 1` header, so other web pages can't change it. **Right-click the clock** to turn seconds on or off (shown smaller after HH:MM; saved as a
+preference in state.json). The browser's own right-click menu is disabled everywhere. The cursor hides after 3 s.
 
 ## Layout
 

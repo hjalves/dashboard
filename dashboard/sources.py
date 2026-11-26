@@ -451,10 +451,13 @@ def kagi_story_url(file: str, timestamp: int | None, cluster_number, title: str 
     """Kagi News' own page for a story, e.g. https://news.kagi.com/europe/2026112511/eu-weighs-...
     Worked out from the URLs Kagi's site uses (2026-11-26): category file name, then the edition's
     UTC date + the day's batch number (1: Kagi publishes once a day) + the story's cluster number,
-    then the headline as a slug (lowercase, punctuation dropped, spaces as hyphens)."""
+    then the headline as a slug (lowercase, punctuation dropped, spaces as hyphens). Kagi finds the
+    story by the number, so only the slug's first words are kept: a shorter URL makes a coarser,
+    easier to scan QR code."""
     if not (timestamp and cluster_number and title):
         return None
     slug = re.sub(r"[\s_-]+", "-", re.sub(r"[^\w\s-]", "", title.lower())).strip("-")
+    slug = "-".join(slug.split("-")[:2])
     day = datetime.fromtimestamp(timestamp, timezone.utc).strftime("%Y%m%d")
     return f"{KAGI}{file.removesuffix('.json')}/{day}1{cluster_number}/{slug}"
 

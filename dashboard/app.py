@@ -7,12 +7,10 @@ serving the previous data (ok=false, error set) so tiles can show "stale" instea
 import asyncio
 import contextlib
 import hashlib
-import io
 import logging
 import time
 from pathlib import Path
 
-import segno
 import uvicorn
 from starlette.applications import Starlette
 from starlette.responses import FileResponse, JSONResponse, Response
@@ -20,6 +18,7 @@ from starlette.routing import Mount, Route
 from starlette.staticfiles import StaticFiles
 
 from . import config, sources
+from .qr import qr_svg
 
 log = logging.getLogger("dashboard")
 STATIC = Path(__file__).parent / "static"
@@ -279,13 +278,9 @@ def build_app(cfg: dict) -> Starlette:
         if not text.startswith(("https://", "http://")) or len(text) > 600:
             return Response("http(s) URL of up to 600 characters only", status_code=400)
         if text not in qr_cache:
-            buf = io.BytesIO()
-            # Low error correction keeps the code coarse, so it scans from further away.
-            segno.make(text, error="l", micro=False).save(
-                buf, kind="svg", border=2, dark="#111111", light="#ffffff", xmldecl=False)
             if len(qr_cache) > 200:
                 qr_cache.clear()
-            qr_cache[text] = buf.getvalue()
+            qr_cache[text] = qr_svg(text)
         return Response(qr_cache[text], media_type="image/svg+xml", headers={"Cache-Control": "max-age=86400"})
 
     async def index(_):

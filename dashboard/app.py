@@ -97,7 +97,16 @@ def build_app(cfg: dict) -> Starlette:
     def news_categories() -> list[str]:
         return list(state.get("news_categories") or n["categories"])
 
-    news = Cached("news", 1800, lambda: sources.fetch_news(news_categories(), int(n["per_category"])))
+    def news_filters() -> list[str]:
+        return list(state.get("news_filters") or [])
+
+    news = Cached("news", 1800, lambda: sources.fetch_news(news_categories()))
+
+    async def news_filtered() -> dict:
+        r = await news.get()
+        if r["data"]:
+            r = {**r, "data": sources.filter_news(r["data"], news_filters(), int(n["per_category"]))}
+        return r
     kagi_categories = Cached("kagi-categories", 86400, sources.fetch_kagi_categories, retry=120)
     github = Cached("github", 300, lambda: sources.fetch_github(int(g["repos"]), int(g["commits"])))
     tv = Cached("tv", 6 * 3600, lambda: sources.fetch_tv(t["playlist"], t["channel"]), retry=300)
@@ -121,7 +130,27 @@ def build_app(cfg: dict) -> Starlette:
         return JSONResponse(await internet.get())
 
     async def news_ep(_):
-        return JSONResponse(await news.get())
+        return JSONResponse(await news_filtered())
+
+    async def news_filters_ep(req):
+        if req.method == "POST":
+            if not csrf_ok(req):
+                return JSONResponse({"error": "missing X-Dashboard header"}, status_code=403)
+            kws = (await req.json()).get("keywords")
+            if not isinstance(kws, list) or len(kws) > 100 or \
+                    not all(isinstance(k, str) and 0 < len(k.strip()) <= 60 for k in kws):
+                return JSONResponse({"error": "keywords: up to 100 strings of 1-60 characters"}, status_code=400)
+            # Keep the first spelling of each keyword, case-insensitively.
+            seen, clean = set(), []
+            for k in (k.strip() for k in kws):
+                if k.casefold() not in seen:
+                    seen.add(k.casefold())
+                    clean.append(k)
+            state["news_filters"] = clean
+            config.save_state(state)
+            log.info("news filters set to %s", clean)
+            return JSONResponse(await news_filtered())
+        return JSONResponse({"keywords": news_filters()})
 
     def csrf_ok(req) -> bool:
         # Custom header: a plain cross-site form or fetch can't send it.
@@ -178,7 +207,7 @@ def build_app(cfg: dict) -> Starlette:
             news.updated = 0.0  # refetch with the new list on the next request
             news.error = None
             log.info("news categories set to %s", state["news_categories"])
-            return JSONResponse(await news.get())
+            return JSONResponse(await news_filtered())
         avail = await kagi_categories.get()
         return JSONResponse({"available": avail["data"] or [], "selected": news_categories(),
                              "error": avail["error"]})
@@ -237,6 +266,7 @@ def build_app(cfg: dict) -> Starlette:
             Route("/api/internet", internet_ep),
             Route("/api/news", news_ep),
             Route("/api/news/categories", news_categories_ep, methods=["GET", "POST"]),
+            Route("/api/news/filters", news_filters_ep, methods=["GET", "POST"]),
             Route("/api/github", github_ep),
             Route("/api/tv", tv_ep),
             Route("/api/version", version),

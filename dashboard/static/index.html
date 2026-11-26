@@ -69,10 +69,17 @@
     <!-- Back of the tile (right-click): Kagi categories. -->
     <div class="tile-back" id="news-back">
       <div class="back-head">
-        <div class="back-title">news categories</div>
+        <div class="pivot" id="news-pivot"><span data-tab="cats" class="on">categories</span><span data-tab="filters">filters</span></div>
         <div class="back-sub" id="picker-sub"></div>
       </div>
       <div class="picker-grid scrollable" id="picker-grid"></div>
+      <div class="filters scrollable" id="filters-pane" hidden>
+        <div class="f-label">hidden keywords <span class="f-hint">click one to show it again</span></div>
+        <div class="f-chips" id="f-current"></div>
+        <div class="f-label">from the story on the tile <span class="f-hint">click to hide stories with it</span></div>
+        <div class="f-chips" id="f-suggest"></div>
+        <div class="f-add"><input id="f-input" type="text" autocomplete="off" placeholder="or type a keyword"><button class="btn" id="f-add-btn">add</button></div>
+      </div>
       <div class="picker-foot">
         <span class="picker-msg" id="picker-msg"></span>
         <button class="btn" id="picker-cancel">cancel</button>

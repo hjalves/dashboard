@@ -3,7 +3,7 @@ import { $, esc, getJSON, postJSON, poll, swapIn, MIN } from "../core.js";
 import { showBack, hideBack, isBack, onRightClick } from "../backs.js";
 
 const news = { stories: [], i: -1, timer: 0 };
-const picker = { available: [], selected: [] };
+const picker = { available: [], selected: [], filters: [], suggest: [], tab: "cats", hidden: 0 };
 
 async function loadNews() {
   applyNews(await getJSON("/api/news"));
@@ -11,6 +11,7 @@ async function loadNews() {
 
 function applyNews(r) {
   if (!r.data) return;
+  picker.hidden = r.data.categories.reduce((n, c) => n + (c.hidden || 0), 0);
   // Round-robin across categories so the tile alternates topics.
   const cats = r.data.categories.filter((c) => c.stories.length);
   const flat = [];
@@ -47,15 +48,62 @@ async function openPicker() {
   $("picker-msg").textContent = "loading…";
   $("picker-grid").innerHTML = "";
   showBack($("news"), () => { clearTimeout(news.timer); news.timer = setTimeout(nextStory, 8000); });
+  picker.suggest = suggestions(news.stories[news.i]);
   try {
-    const r = await getJSON("/api/news/categories");
+    const [r, f] = await Promise.all([getJSON("/api/news/categories"), getJSON("/api/news/filters")]);
     picker.available = r.available;
     picker.selected = r.selected.slice();
+    picker.filters = f.keywords.slice();
     $("picker-msg").textContent = r.error ? "list may be out of date" : "";
   } catch (e) {
-    $("picker-msg").textContent = "couldn't load categories";
+    $("picker-msg").textContent = "couldn't load the settings";
   }
-  renderPicker();
+  setTab(picker.tab);
+}
+
+/* Words worth filtering on, from the story on the tile: its topic, its place, and the names in its
+   headline (runs of capitalised words, plus each of their words). */
+function suggestions(s) {
+  if (!s) return [];
+  const out = [];
+  const add = (w) => { w = (w || "").trim(); if (w.length >= 2 && !out.some((o) => o.toLowerCase() === w.toLowerCase())) out.push(w); };
+  add(s.topic);
+  (s.location || "").split(",").forEach(add);
+  for (const m of (s.title || "").matchAll(/\p{Lu}[\p{L}\p{N}’'.&-]*(?:\s+\p{Lu}[\p{L}\p{N}’'.&-]*)*/gu)) {
+    add(m[0]);
+    const parts = m[0].split(/\s+/);
+    if (parts.length > 1) parts.forEach((p) => { if (p.length >= 3) add(p); });
+  }
+  return out.slice(0, 14);
+}
+
+function setTab(tab) {
+  picker.tab = tab;
+  document.querySelectorAll("#news-pivot span").forEach((el) => el.classList.toggle("on", el.dataset.tab === tab));
+  $("picker-grid").hidden = tab !== "cats";
+  $("filters-pane").hidden = tab !== "filters";
+  if (tab === "cats") renderPicker(); else renderFilters();
+}
+
+function renderFilters() {
+  const has = (w) => picker.filters.some((f) => f.toLowerCase() === w.toLowerCase());
+  $("f-current").innerHTML = picker.filters.length
+    ? picker.filters.map((k) => `<span class="chip on" data-k="${esc(k)}">${esc(k)}</span>`).join("")
+    : `<span class="none">nothing hidden</span>`;
+  const sug = picker.suggest.filter((w) => !has(w));
+  $("f-suggest").innerHTML = sug.length
+    ? sug.map((w) => `<span class="chip" data-w="${esc(w)}">${esc(w)}</span>`).join("")
+    : `<span class="none">no suggestions</span>`;
+  $("picker-sub").textContent = picker.filters.length
+    ? `${picker.filters.length} keyword${picker.filters.length === 1 ? "" : "s"} · ${picker.hidden} stor${picker.hidden === 1 ? "y" : "ies"} hidden now`
+    : "hide stories whose headline, summary or topic contains a word (whole words, any case)";
+  $("picker-save").disabled = !picker.selected.length;
+}
+
+function addFilter(w) {
+  w = w.trim();
+  if (w && !picker.filters.some((f) => f.toLowerCase() === w.toLowerCase())) picker.filters.push(w);
+  renderFilters();
 }
 
 function renderPicker() {
@@ -78,12 +126,23 @@ export function initNews(scene) {
     if (k >= 0) picker.selected.splice(k, 1); else picker.selected.push(c);
     renderPicker();
   });
+  $("news-pivot").addEventListener("click", (e) => { const t = e.target.closest("[data-tab]"); if (t) setTab(t.dataset.tab); });
+  $("f-current").addEventListener("click", (e) => {
+    const c = e.target.closest("[data-k]");
+    if (!c) return;
+    picker.filters = picker.filters.filter((f) => f !== c.dataset.k);
+    renderFilters();
+  });
+  $("f-suggest").addEventListener("click", (e) => { const c = e.target.closest("[data-w]"); if (c) addFilter(c.dataset.w); });
+  $("f-add-btn").addEventListener("click", () => { addFilter($("f-input").value); $("f-input").value = ""; });
+  $("f-input").addEventListener("keydown", (e) => { if (e.key === "Enter") { addFilter(e.target.value); e.target.value = ""; } });
   $("picker-cancel").addEventListener("click", hideBack);
   $("picker-save").addEventListener("click", async () => {
     $("picker-save").disabled = true;
     $("picker-msg").textContent = "saving…";
     try {
-      const j = await postJSON("/api/news/categories", { selected: picker.selected });
+      await postJSON("/api/news/categories", { selected: picker.selected });
+      const j = await postJSON("/api/news/filters", { keywords: picker.filters });
       hideBack();
       news.stories = [];
       news.i = -1;

@@ -458,7 +458,34 @@ async def fetch_kagi_categories() -> list[str]:
     return [cat["name"] for cat in index["categories"]]
 
 
-async def fetch_news(categories: list[str], per_category: int) -> dict:
+def _keyword_re(keywords: list[str]):
+    """Whole-word, case-insensitive match for any keyword ("AI" mustn't hide stories with "said")."""
+    words = [k.strip() for k in keywords if k.strip()]
+    if not words:
+        return None
+    return re.compile("|".join(rf"(?<!\w){re.escape(w)}(?!\w)" for w in words), re.IGNORECASE)
+
+
+def filter_news(raw: dict, keywords: list[str], per_category: int) -> dict:
+    """Drop stories mentioning a hidden keyword (headline, summary or topic), then keep the first
+    `per_category` of each category, so hidden stories are replaced by the next ones."""
+    rx = _keyword_re(keywords)
+    cats = []
+    for c in raw["categories"]:
+        kept, hidden = [], 0
+        for st in c["stories"]:
+            text = " ".join(filter(None, (st.get("title"), st.get("summary"), st.get("topic"))))
+            if rx and rx.search(text):
+                hidden += 1
+            else:
+                kept.append(st)
+        cats.append({**c, "stories": kept[:per_category], "hidden": hidden})
+    return {**raw, "categories": cats}
+
+
+async def fetch_news(categories: list[str]) -> dict:
+    """Every story Kagi has in each category (filtering and the per-category limit are applied per
+    request, so changing them doesn't need a refetch)."""
     async with client() as c:
         index = (await c.get(KAGI + "kite.json")).raise_for_status().json()
         files = {cat["name"]: cat["file"] for cat in index["categories"]}
@@ -473,7 +500,7 @@ async def fetch_news(categories: list[str], per_category: int) -> dict:
             continue
         d = r.json()
         stories = []
-        for cl in d.get("clusters", [])[:per_category]:
+        for cl in d.get("clusters", []):
             img = cl.get("primary_image") or {}
             stories.append({
                 "title": _uncite(cl.get("title")),

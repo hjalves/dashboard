@@ -47,7 +47,12 @@ and choosing night by hand means it isn't switched away in the morning.
 
 No keyboard needed. With a mouse: click the TV to toggle sound, click the news to skip ahead,
 **right-click the news to turn the tile over** (Metro style) and choose its Kagi categories on
-the back: click to add/remove, the numbers are the rotation order, save; cancel, a second
+the back. Two tabs: **categories** (click to add/remove, the numbers are the rotation order) and
+**filters**: keywords that hide stories whose headline, summary or topic contains them (whole
+words, any case). Without a keyboard, click the suggested words taken from the story on the tile
+(its topic, place and the names in its headline); with one (e.g. the page opened on a phone), type
+any keyword. Filtering happens per request on the server, before the 12-per-category cut, so hidden
+stories are replaced by the next ones. Save; cancel, a second
 right-click or a click outside turns it back unchanged. **Right-click either weather tile** to choose
 the forecast source, MET Norway or IPMA (click one to switch). These choices are stored in
 `~/.local/state/dashboard/state.json` and override `[news] categories` and `[weather] source` in

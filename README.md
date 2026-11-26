@@ -56,8 +56,9 @@ stories are replaced by the next ones. A third tab, **display**, turns on a disc
 the tile's corner with the story's page on Kagi News. The feed has no URL field, so it's built the
 way Kagi's site builds it: `/{category}/{YYYYMMDD}1{cluster_number}/{slug}`, assuming
 one batch a day (falls back to the first source article). The code is drawn by the server (`/api/qr`, `dashboard/qr.py` on segno's matrix: deep-purple
-dots on a frosted-glass card (translucent off-white with the photo blurred behind it) with
-ring-and-centre finder eyes, 4 screen pixels per module so the gaps are
+dots with ring-and-centre finder eyes on "photo-tinted glass" (the card holds an aligned,
+blurred, brightened copy of the story photo under a light wash, and the dots `multiply` into it;
+plain CSS filters, because Firefox doesn't render `backdrop-filter` reliably here), 4 screen pixels per module so the gaps are
 whole pixels), so no outside service sees it. The slug is cut to two words to keep the code
 small; Kagi finds the story by the number anyway. Save; cancel, a second
 right-click or a click outside turns it back unchanged. **Right-click either weather tile** to choose

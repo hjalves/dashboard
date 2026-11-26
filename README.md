@@ -100,6 +100,20 @@ uv sync
 uv run dashboard            # http://localhost:8001, config from ~/.config/dashboard/config.toml
 ```
 
+## Devlog
+
+`docs/devlog/` keeps dated screenshots of the real kiosk screen. To add a snapshot:
+
+```bash
+uv run --with pillow tools/snapshot.py     # captures home, network and night on asus-arch
+```
+
+It switches the open page through each scene (POST `/api/control`, which pages receive over the
+`/api/events` stream), captures with `grim`, crops the panel off, saves WebP files and adds an
+entry to `docs/devlog/README.md` with the current commit and a TODO line to describe the change.
+The page goes back to the scene it was on. Screenshots show private repo names, LAN devices and
+what's on TV: keep that in mind if the repo is ever made public.
+
 ## Deploy (asus-arch)
 
 ```bash

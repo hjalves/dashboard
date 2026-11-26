@@ -179,9 +179,11 @@ body.idle .tv-mute:not(.on) { opacity: 0; }
   background: #4b2a7b;  /* under the glass: where the blur fades at the tile edge, no sharp photo shows */
   box-shadow: 0 .4rem 1.6rem rgba(0, 0, 0, .35); }
 .news-qr-wrap[hidden] { display: none; }
+/* Low contrast keeps the card in a mid-light band whatever the photo (measured 104-185 of 255 on
+   8 photos): never glaring white on bright photos, never too dark for the dots on dark ones. */
 .qr-glass { position: absolute; background: #3b2466 center / cover no-repeat;
-  filter: blur(12px) brightness(1.6) saturate(1.6); }
-.qr-wash { position: absolute; inset: 0; background: rgba(255, 255, 255, .28); }
+  filter: blur(12px) saturate(1.7) contrast(.55) brightness(.95); }
+.qr-wash { position: absolute; inset: 0; background: rgba(255, 255, 255, .18); }
 .news-qr { position: relative; display: block; mix-blend-mode: multiply; opacity: .92; }
 .nb-label.qr-label { width: auto; margin-right: 1rem; }
 .f-hint.qr-hint { margin: .6rem 0 0; }

@@ -80,12 +80,13 @@ function suggestions(s) {
   return out.slice(0, 14);
 }
 
-/* Option: a QR code for the story's link (its first source article), made by our server. */
+/* Option: a QR code for the story's page on Kagi News (else its first source article), made by
+   our server. */
 function showQr(s) {
-  const img = $("news-qr");
-  if (news.qr && s && s.link) {
-    img.src = "/api/qr?text=" + encodeURIComponent(s.link);
-    img.title = s.link;
+  const img = $("news-qr"), url = s && (s.kagi_url || s.link);
+  if (news.qr && url) {
+    img.src = "/api/qr?text=" + encodeURIComponent(url);
+    img.title = url;
     img.hidden = false;
   } else {
     img.hidden = true;

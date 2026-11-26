@@ -447,6 +447,18 @@ KAGI = "https://news.kagi.com/"
 _CITE = re.compile(r"\s*\[[^\]\s]+#\d+\]")
 
 
+def kagi_story_url(file: str, timestamp: int | None, cluster_number, title: str | None) -> str | None:
+    """Kagi News' own page for a story, e.g. https://news.kagi.com/europe/2026112511/eu-weighs-...
+    Worked out from the URLs Kagi's site uses (2026-11-26): category file name, then the edition's
+    UTC date + the day's batch number (1: Kagi publishes once a day) + the story's cluster number,
+    then the headline as a slug (lowercase, punctuation dropped, spaces as hyphens)."""
+    if not (timestamp and cluster_number and title):
+        return None
+    slug = re.sub(r"[\s_-]+", "-", re.sub(r"[^\w\s-]", "", title.lower())).strip("-")
+    day = datetime.fromtimestamp(timestamp, timezone.utc).strftime("%Y%m%d")
+    return f"{KAGI}{file.removesuffix('.json')}/{day}1{cluster_number}/{slug}"
+
+
 def _uncite(text):
     return _CITE.sub("", text).strip() if text else text
 
@@ -494,7 +506,7 @@ async def fetch_news(categories: list[str]) -> dict:
         resps = await asyncio.gather(*(c.get(KAGI + f) for _, f in wanted if f), return_exceptions=True)
 
     out = []
-    for (name, _), r in zip([w for w in wanted if w[1]], resps):
+    for (name, file), r in zip([w for w in wanted if w[1]], resps):
         if isinstance(r, Exception) or r.status_code != 200:
             missing.append(name)
             continue
@@ -511,6 +523,7 @@ async def fetch_news(categories: list[str]) -> dict:
                 "sources": cl.get("unique_domains"),
                 "image": img.get("url") or None,
                 "link": (cl.get("articles") or [{}])[0].get("link"),
+                "kagi_url": kagi_story_url(file, d.get("timestamp"), cl.get("cluster_number"), cl.get("title")),
             })
         out.append({"name": name, "timestamp": d.get("timestamp"), "stories": stories})
     return {"categories": out, "missing": missing}

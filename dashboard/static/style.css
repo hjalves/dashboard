@@ -93,7 +93,8 @@ body.idle, body.idle * { cursor: none !important; }
 .now-side { min-width: 0; }
 .weather-now .desc { font-size: 2.4rem; font-weight: 400; line-height: 1.15; }
 .weather-now .hilo { font-size: 2rem; color: var(--ink-2); margin-top: .5rem; }
-.weather-now .facts { margin-top: 1.6rem; font-size: 1.7rem; color: var(--ink-2); display: flex; gap: 2.2rem; flex-wrap: wrap; }
+.weather-now .facts { margin-top: 1.4rem; font-size: 1.7rem; color: var(--ink-2); white-space: nowrap;
+  display: grid; grid-template-columns: repeat(3, auto); justify-content: start; gap: .5rem 2.4rem; }
 .facts b { font-weight: 400; color: var(--ink); }
 
 .weather-hourly { grid-column: 7 / 13; grid-row: 1; background: var(--weather-2); display: flex; gap: 2.4rem; }

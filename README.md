@@ -7,7 +7,7 @@ fetches and caches every source; the page is plain HTML/CSS/JS shown fullscreen 
 | Tile | Source | Refresh |
 |---|---|---|
 | clock | browser | every second |
-| weather now | WS2900 station via the router's weatherd (`/ubus`, anonymous read) | 1 min |
+| weather now | WS2900 station via the router's weatherd (`/ubus`, anonymous read): temperature, today's low/high and rain, humidity, wind, relative pressure with its 3-hour tendency (↗ ↘ →, ±1 hPa), UV index while the sun is up | 1 min |
 | forecast | MET Norway Locationforecast 2.0 (`complete`, by coordinates): hourly temperature, rain in mm and symbol; the two day columns are summed from it (min/max, total mm, the 06–18 h symbol). Symbol names from MET's `legend.csv`. Or IPMA (`source = "ipma"`), where `-99` means "same as the previous hour" | 30 min |
 | news | Kagi News (`news.kagi.com/<category>.json`, published once a day; the tile shows the edition date), up to 12 stories per category, alternating categories every 14 s | 30 min |
 | github | GraphQL: your repos by last push, with their latest commits | 5 min |

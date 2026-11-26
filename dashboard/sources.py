@@ -113,6 +113,10 @@ async def fetch_station(url: str) -> dict:
         coarse = await _ubus(c, url, "query", {"from": int(midnight.timestamp()), "to": int(hour.timestamp()) - 1,
                                                 "tier": "coarse", "limit": 30})
         fine = await _ubus(c, url, "query", {"from": int(hour.timestamp()), "tier": "fine", "limit": 200})
+        # A few samples from about 3 h ago, for the pressure trend (barometer tendency).
+        then = latest["time"] - 3 * 3600
+        past = (await _ubus(c, url, "query", {"from": then - 300, "to": then + 300, "tier": "fine", "limit": 12}))
+        past = [x for x in past.get("samples", []) if x.get("press") is not None]
     samples = coarse.get("samples", []) + fine.get("samples", [])
     highs = [s.get("temp_max", s.get("temp")) for s in samples] + [latest.get("temp")]
     lows = [s.get("temp_min", s.get("temp")) for s in samples] + [latest.get("temp")]
@@ -137,6 +141,9 @@ async def fetch_station(url: str) -> dict:
         "today_high": sc(max(highs), 0.1) if highs else None,
         "today_low": sc(min(lows), 0.1) if lows else None,
         "today_rain": round(sum(s.get("rain", 0) for s in samples) * 0.01, 1),
+        # hPa change over the last 3 h (relative pressure), None without history.
+        "press_3h": round((latest["press"] - min(past, key=lambda x: abs(x["time"] - then))["press"]) * 0.1, 1)
+        if past and latest.get("press") is not None else None,
     }
 
 

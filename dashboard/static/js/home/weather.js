@@ -69,7 +69,14 @@ export async function loadWeather() {
   if (st) {
     if (st.hum != null) facts.push(`<span>humidity <b>${st.hum}%</b></span>`);
     if (st.wind_kmh != null) facts.push(`<span>wind <b>${Math.round(st.wind_kmh)}</b> km/h</span>`);
-    if (st.today_rain) facts.push(`<span>rain today <b>${st.today_rain}</b> mm</span>`);
+    if (st.today_rain) facts.push(`<span>rain <b>${st.today_rain}</b> mm</span>`);
+    if (st.press != null) {
+      // Barometer tendency over 3 h: ±1 hPa or more counts as rising/falling.
+      const d = st.press_3h, arrow = d == null ? "" : d >= 1 ? " ↗" : d <= -1 ? " ↘" : " →";
+      const tip = d == null ? "" : ` title="${d > 0 ? "+" : ""}${d} hPa in 3 h"`;
+      facts.push(`<span${tip}><b>${Math.round(st.press)}</b> hPa${arrow}</span>`);
+    }
+    if (st.uv != null && f && isDaytime(f)) facts.push(`<span>UV <b>${st.uv}</b></span>`);
   } else if (first) {
     // Station off: the forecast's current hour.
     if (first.hum != null) facts.push(`<span>humidity <b>${Math.round(first.hum)}%</b></span>`);
@@ -103,6 +110,11 @@ function renderDays(f) {
       <div class="ddesc">${esc(d.desc || "")}</div>
       <div class="drain">rain <b>${d.rain_mm != null ? fmtMM(d.rain_mm) + " mm" : d.rain_prob != null ? Math.round(d.rain_prob) + "%" : "--"}</b></div></div>`;
   }).join("");
+}
+
+function isDaytime(f) {
+  const now = Date.now();
+  return now > new Date(f.sunrise) && now < new Date(f.sunset);
 }
 
 function nextSunrise(rise) {

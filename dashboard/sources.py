@@ -479,6 +479,11 @@ async def fetch_moon(lat: float, lon: float) -> dict:
 
 # ---------------------------------------------------------------- calendar
 
+# Last events fetched per calendar: a calendar that fails (e.g. the network isn't up yet after a
+# wake from suspend) keeps showing these instead of emptying.
+_last_calendar_events: dict[str, list[dict]] = {}
+
+
 async def fetch_calendar(calendars: list[dict], days: int) -> dict:
     """Events from iCal feeds (e.g. Google Calendar's secret iCal addresses) from the start of today
     for `days` days, with repeating events expanded. Errors name the calendar, never its URL: the
@@ -504,13 +509,16 @@ async def fetch_calendar(calendars: list[dict], days: int) -> dict:
     for cal, body, err in results:
         if err:
             errors.append(err)
+            events.extend(_last_calendar_events.get(cal["name"], []))
             continue
         try:
             ics = icalendar.Calendar.from_ical(body)
             occurrences = recurring_ical_events.of(ics).between(start, end)
         except Exception as e:  # noqa: BLE001 - a malformed feed shouldn't hide the others
             errors.append(f"{cal['name']}: {type(e).__name__}")
+            events.extend(_last_calendar_events.get(cal["name"], []))
             continue
+        mine = []
         for ev in occurrences:
             dts, dte = ev.get("DTSTART"), ev.get("DTEND")
             if dts is None:
@@ -526,12 +534,14 @@ async def fetch_calendar(calendars: list[dict], days: int) -> dict:
                 s_iso, e_iso = s0.astimezone(TZ).isoformat(), e0.astimezone(TZ).isoformat()
             if str(ev.get("STATUS", "")).upper() == "CANCELLED":
                 continue
-            events.append({
+            mine.append({
                 "title": str(ev.get("SUMMARY", "")).strip() or "(no title)",
                 "start": s_iso, "end": e_iso, "all_day": all_day,
                 "location": str(ev.get("LOCATION", "")).strip() or None,
                 "calendar": cal["name"], "color": cal.get("color"),
             })
+        _last_calendar_events[cal["name"]] = mine
+        events.extend(mine)
     events.sort(key=lambda e: (e["start"][:10], not e["all_day"], e["start"]))
     return {"events": events, "errors": errors, "from": start.date().isoformat(), "days": days}
 

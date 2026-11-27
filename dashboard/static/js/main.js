@@ -10,9 +10,8 @@ import { initTv, tv } from "./home/tv.js";
 import { initNetwork } from "./network/network.js";
 import { initNight } from "./night/night.js";
 
-initClock(() => {  // resumed from sleep
-  refreshAll(activeScene());
-  tv.restart("resumed");
+initClock(() => {  // resumed from sleep: give the network a moment to come back first
+  setTimeout(() => { refreshAll(activeScene()); tv.restart("resumed"); }, 20000);
 });
 initWeather("home");
 initNews("home");

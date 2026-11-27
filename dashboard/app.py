@@ -40,8 +40,11 @@ class RevalidatedStatic(StaticFiles):
 
 
 class Cached:
-    def __init__(self, name: str, ttl: float, fetch, retry: float = 60):
-        self.name, self.ttl, self.fetch, self.retry = name, ttl, fetch, retry
+    """`partial(data)` (optional) says a fetch only half worked (e.g. some calendars failed): the
+    data is kept but refetched after `retry` instead of `ttl`."""
+
+    def __init__(self, name: str, ttl: float, fetch, retry: float = 60, partial=None):
+        self.name, self.ttl, self.fetch, self.retry, self.partial = name, ttl, fetch, retry, partial
         self.data = None
         self.updated = 0.0
         self.tried = 0.0
@@ -52,7 +55,8 @@ class Cached:
         now = time.time()
         if self.error:
             return now - self.tried < self.retry
-        return now - self.updated < self.ttl
+        ttl = self.retry if self.partial and self.data is not None and self.partial(self.data) else self.ttl
+        return now - self.updated < ttl
 
     async def get(self) -> dict:
         if not self.fresh():
@@ -119,7 +123,8 @@ def build_app(cfg: dict) -> Starlette:
     cal_cfg = cfg["calendar"]
     tk = cfg["tasks"]
     tasks = Cached("tasks", 300, lambda: sources.fetch_tasks(tk["url"], tk["token"])) if tk["url"] else None
-    calendar = Cached("calendar", 600, lambda: sources.fetch_calendar(list(cal_cfg["calendars"]), int(cal_cfg["days"])))
+    calendar = Cached("calendar", 600, lambda: sources.fetch_calendar(list(cal_cfg["calendars"]), int(cal_cfg["days"])),
+                      partial=lambda d: bool(d["errors"]))
     github = Cached("github", 300, lambda: sources.fetch_github(int(g["repos"]), int(g["commits"])))
     # TV: the configured channels; the one on screen is chosen by right-clicking the tile (state).
     tv = Cached("tv", 6 * 3600, lambda: sources.fetch_tv(t["playlist"], list(t["channels"])), retry=300)
